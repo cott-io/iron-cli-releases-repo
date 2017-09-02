@@ -72,10 +72,9 @@ then
     mkdir "$(get_binary_directory)"
 fi
 
-if [ -e "$(get_version_path $version)" ]
+if [ ! -e "$(get_version_path $version)" ]
 then
-    exec "$(get_version_path $version)"
-else
     download_warden $version
-    exec "$(get_version_path $version)"
 fi
+
+exec "$(get_version_path $version)"
