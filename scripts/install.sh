@@ -40,7 +40,6 @@ download_warden_script()
     warden_script_path="$WARDEN_HOME/bin/warden"
     curl -fsSL "https://raw.githubusercontent.com/NoFateLLC/warden-releases/master/scripts/warden.sh" > "$warden_script_path"
     chmod +x "$warden_script_path"
-    exec "$warden_script_path"
 }
 
 set_env_variables
