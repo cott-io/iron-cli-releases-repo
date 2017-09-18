@@ -114,7 +114,7 @@ add_env() {
 export WARDEN_VERSION="$warden_version"
 export WARDEN_OS_ARCH="$warden_os_arch"
 export WARDEN_HOME="$warden_home"
-export PATH="$PATH:$WARDEN_HOME/bin"
+export PATH="$PATH:\$WARDEN_HOME/bin"
 EOM
 
     source $env_path
