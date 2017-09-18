@@ -40,10 +40,6 @@ set_os_specific_commands() {
 	fi
 }
 
-read_tag_name() {
-	$GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
-}
-
 read_md5() {
 	$GREP_EXTENDED -o "^\w+"
 }
@@ -73,7 +69,7 @@ get_version_remote_md5() {
 }
 
 get_latest_version() {
-	curl -fsSL "$GITHUB_API_RELEASES_REPO_URL/releases/latest" | read_tag_name
+	curl -fsSL "$GITHUB_API_RELEASES_REPO_URL/releases/latest" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
 }
 
 get_release_filename() {
