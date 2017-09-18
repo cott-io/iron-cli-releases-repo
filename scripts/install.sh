@@ -121,11 +121,11 @@ EOM
 
     source_line="source $env_path"
 
-	shell_rc_path=`get_shell_rc_path $shell`
+	shell_rc_path=$(get_shell_rc_path $shell)
 
     if [[ $? -ne 0 ]]; then
         console_error "Unable to add add to $shell rc file. Please add '$source_line' to your shell's rc file"
-        return
+        return 1
     fi
 
 	if grep -q "$source_line" $shell_rc_path; then
@@ -135,26 +135,23 @@ EOM
 	echo $source_line >> $shell_rc_path
 }
 
-create_warden_directories() {
-	if [[ ! -d "$WARDEN_HOME" ]] || [[ ! -d "$WARDEN_HOME/bin" ]]; then
-		mkdir -p "$WARDEN_HOME/bin"
-	fi
-}
-
 download_warden_script() {
     mkdir -p "$WARDEN_HOME/bin"
 	warden_script_path="$WARDEN_HOME/bin/warden"
 	curl -fsSL "https://raw.githubusercontent.com/NoFateLLC/warden-releases/master/scripts/warden.sh" >"$warden_script_path"
 	if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-		echo "Error downloading warden.sh"
+		console_error "Error downloading warden.sh"
 		return 1
 	fi
 	chmod +x "$warden_script_path"
 }
 
 set_os_specific_commands
-add_env
 
-download_warden_script
+if ! add_env; then
+    exit 1
+fi
 
-console_info "Successfully installed warden! Please source your environment for changes to take effect (Start a new terminal session)."
+if download_warden_script; then
+    console_info "Successfully installed warden! Please source your environment for changes to take effect (Start a new terminal session)."
+fi
