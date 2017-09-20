@@ -133,7 +133,9 @@ verify_env() {
 
 # Main
 set_os_specific_commands
-verify_env
+if ! verify_env; then
+	exit 1
+fi
 
 if [[ $1 = "update" ]]; then
     exec "$WARDEN_HOME/bin/warden-update $WARDEN_VERSION"

@@ -126,8 +126,8 @@ EOM
     cat <<-EOM
 Set the following in $WARDEN_HOME/env.sh:
 
-export WARDEN_VERSION="$warden_version"
-export WARDEN_OS_ARCH="$warden_os_arch"
+export WARDEN_VERSION="$latest_version"
+export WARDEN_OS_ARCH="$os_arch"
 export WARDEN_HOME="$warden_home"
 export PATH="$PATH:$WARDEN_HOME/bin"
 
