@@ -94,23 +94,14 @@ get_latest_version() {
 add_env() {
 	latest_version="$(get_latest_version)"
 	os_arch="$(get_os_arch)"
-	default_warden_home="$HOME/.warden"
-    env_shell="$(get_shell)"
-
-	read -p "What version of warden do you want to install (WARDEN_VERSION)? [$latest_version] " warden_version
-	warden_version=${warden_version:-$latest_version}
-	read -p "Set WARDEN_OS_ARCH (i.e. darwin_x86_64, linux_i386) [$os_arch]: " warden_os_arch
-	warden_os_arch=${warden_os_arch:-$os_arch}
-	read -p "What do you want the warden home directory to be (WARDEN_HOME)? [$default_warden_home]: " warden_home
-	warden_home=${warden_home:-$default_warden_home}
-    read -p "What is your shell (i.e. bash, zsh)? [$env_shell] " shell
-    shell=${shell:-$env_shell}
+	warden_home="$HOME/.warden"
+    shell="$(get_shell)"
 
 	mkdir -p $warden_home
 
 	env_path="$warden_home/env.sh"
 
-	cat >"$env_path" <<-EOM
+	cat > "$env_path" <<-EOM
 export WARDEN_VERSION="$warden_version"
 export WARDEN_OS_ARCH="$warden_os_arch"
 export WARDEN_HOME="$warden_home"
@@ -128,11 +119,23 @@ EOM
         return 1
     fi
 
-	if grep -q "$source_line" $shell_rc_path; then
-		return
+	if ! grep -q "$source_line" $shell_rc_path; then
+		echo $source_line >> $shell_rc_path
 	fi
 
-	echo $source_line >> $shell_rc_path
+    cat <<-EOM
+Set the following in $WARDEN_HOME/env.sh:
+
+export WARDEN_VERSION="$warden_version"
+export WARDEN_OS_ARCH="$warden_os_arch"
+export WARDEN_HOME="$warden_home"
+export PATH="$PATH:$WARDEN_HOME/bin"
+
+and added the following to $shell_rc_path:
+
+$source_line
+
+EOM
 }
 
 download_warden_script() {
@@ -146,12 +149,23 @@ download_warden_script() {
 	chmod +x "$warden_script_path"
 }
 
+download_warden_update_script() {
+    mkdir -p "$WARDEN_HOME/bin"
+	warden_update_script_path="$WARDEN_HOME/bin/warden-update"
+	curl -fsSL "https://raw.githubusercontent.com/NoFateLLC/warden-releases/master/scripts/warden-update.sh" >"$warden_update_script_path"
+	if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+		console_error "Error downloading warden-update.sh"
+		return 1
+	fi
+	chmod +x "$warden_update_script_path"
+}
+
 set_os_specific_commands
 
 if ! add_env; then
     exit 1
 fi
 
-if download_warden_script; then
+if download_warden_script && download_warden_update_script; then
     console_info "Successfully installed warden! Please source your environment for changes to take effect (Start a new terminal session)."
 fi
