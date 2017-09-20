@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+GITHUB_API_RELEASES_REPO_URL="https://api.github.com/repos/NoFateLLC/warden-releases"
+GITHUB_RELEASES_DOWNLOAD_URL="https://github.com/nofatellc/warden-releases/releases/download"
+
 console_info() {
 	if ! tput setaf &>/dev/null; then
 		echo "$1"
@@ -14,17 +17,6 @@ console_error() {
 	else
 		echo "$(tput setaf 1)$1$(tput sgr0)" 1>&2
 	fi
-}
-
-GITHUB_API_RELEASES_REPO_URL="https://api.github.com/repos/NoFateLLC/warden-releases"
-GITHUB_RELEASES_DOWNLOAD_URL="https://github.com/nofatellc/warden-releases/releases/download"
-
-semver_parse() {
-	major="${1%%.*}"
-	minor="${1#$major.}"
-	minor="${minor%%.*}"
-	patch="${1#$major.$minor.}"
-	patch="${patch%%[-.]*}"
 }
 
 set_os_specific_commands() {
@@ -42,10 +34,6 @@ set_os_specific_commands() {
 
 read_md5() {
 	$GREP_EXTENDED -o "^\w+"
-}
-
-get_binary_directory() {
-	echo "$WARDEN_HOME/bin"
 }
 
 get_version_directory() {
@@ -68,10 +56,6 @@ get_version_remote_md5() {
 	echo $md5
 }
 
-get_latest_version() {
-	curl -fsSL "$GITHUB_API_RELEASES_REPO_URL/releases/latest" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
-}
-
 get_release_filename() {
     echo "warden-$WARDEN_OS_ARCH.tar.gz"
 }
@@ -87,28 +71,6 @@ get_version_binary_path() {
 	version=$1
 
 	echo "$(get_version_directory $version)/warden"
-}
-
-update() {
-	version=$1
-
-	latest_version="$(get_latest_version)"
-
-	if [[ $latest_version == $version ]]; then
-		return
-	fi
-
-	console_info "The latest version is $latest_version. You are using $version."
-	read -p "Do you want to upgrade to $latest_version? [yN]" upgrade_prompt
-	case $upgrade_prompt in
-		[Yy]* )
-			exec "$(get_binary_directory)/warden" $latest_version
-			break;;
-		[Nn]* )
-			return;;
-		* )
-			return;;
-	esac
 }
 
 download_warden() {
@@ -174,7 +136,7 @@ set_os_specific_commands
 verify_env
 
 if [[ $1 = "update" ]]; then
-    update $WARDEN_VERSION
+    exec "$WARDEN_HOME/bin/warden-update $WARDEN_VERSION"
     exit 0
 fi
 
