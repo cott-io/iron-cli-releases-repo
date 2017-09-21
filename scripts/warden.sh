@@ -151,4 +151,4 @@ if [ ! -e "$(get_version_binary_path $version)" ]; then
     fi
 fi
 
-exec "$(get_version_binary_path $version)"
+exec "$(get_version_binary_path $version)" "$@"
