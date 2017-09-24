@@ -32,86 +32,26 @@ set_os_specific_commands() {
     fi
 }
 
-read_md5() {
-    $GREP_EXTENDED -o "^\w+"
-}
+auto_update() {
+	version=$1
 
-get_version_directory() {
-    version=$1
+	latest_version="$(get_latest_version)"
 
-    echo "$WARDEN_HOME/versions/$version"
-}
+	if [[ $latest_version == $version ]]; then
+		return
+	fi
 
-get_version_remote_md5() {
-    version=$1
-
-    md5_url="$(get_version_release_url $version).md5"
-
-    md5="$(curl -fsSL "$md5_url")"
-    if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-        console_error "Error downloading $md5_url"
-        return 1
-    fi
-
-    echo $md5
-}
-
-get_release_filename() {
-    echo "warden-$WARDEN_OS_ARCH.tar.gz"
-}
-
-get_version_release_url() {
-    version=$1
-
-    release_filename="$(get_release_filename)"
-    echo "$GITHUB_RELEASES_DOWNLOAD_URL/$version/$release_filename"
-}
-
-get_version_binary_path() {
-    version=$1
-
-    echo "$(get_version_directory $version)/warden"
-}
-
-download_warden() {
-    version=$1
-    
-    console_info "Downloading warden version: [$version] platform: [$WARDEN_OS_ARCH]..."
-
-    release_filename="$(get_release_filename)"
-    download_url="$(get_version_release_url $version)"
-
-    mkdir -p "$(get_version_directory $version)"
-
-    release_tar_path="$(get_version_directory $version)/$release_filename"
-
-    curl -fsSL "$download_url" > $release_tar_path
-    if [[ $? -ne 0 ]]; then
-        console_error "Error downloading $download_url"
-        return 1
-    fi
-
-    # $MD5 $release_tar_path > "$(get_version_directory $version)/$release_filename.md5"
-    downloaded_tar_md5="$($MD5 $release_tar_path | read_md5)"
-    remote_tar_md5="$(get_version_remote_md5 $version | read_md5)"
-
-    if [[ "$downloaded_tar_md5" != "$remote_tar_md5" ]]; then
-        rm $release_tar_path
-        console_error "Downloaded $release_filename MD5 [$downloaded_tar_md5] does not match remote MD5 [$remote_tar_md5]"
-        return 1
-    fi
-
-    tar -xf $release_tar_path -C "$(get_version_directory $version)"
-    if [[ $? -ne 0 ]]; then
-        console_error "Error extracting tar $release_tar_path"
-        return 1
-    fi
-
-    chmod +x "$(get_version_binary_path $version)"
-    if [[ $? -ne 0 ]]; then
-        console_error "Error making $(get_version_binary_path $version) executable"
-        return 1
-    fi
+	console_info "The latest version is $latest_version. You are using $version."
+	read -p "Do you want to upgrade to $latest_version? [yN]" upgrade_prompt
+	case $upgrade_prompt in
+		[Yy]* )
+			exec "$(get_binary_directory)/warden" $latest_version
+			break;;
+		[Nn]* )
+			return;;
+		* )
+			return;;
+	esac
 }
 
 verify_env() {
@@ -129,12 +69,17 @@ verify_env() {
         console_error "WARDEN_VERSION not set..."
         return 1
     fi
+
+    if [[ -z "$WARDEN_AUTO_UPDATE_INTERVAL" ]]; then
+        console_error "WARDEN_AUTO_UPDATE_INTERVAL not set..."
+        return 1
+    fi
 }
 
 # Main
 set_os_specific_commands
 if ! verify_env; then
-    exit 1
+    exit $?
 fi
 
 if [ ! -e "$(get_version_binary_path $WARDEN_VERSION)" ]; then
