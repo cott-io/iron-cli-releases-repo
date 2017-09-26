@@ -64,22 +64,6 @@ get_shell_rc_path() {
 	esac
 }
 
-get_os() {
-	os=$(uname -s)
-	case $os in
-	"Darwin")
-		echo "darwin"
-		;;
-	"Linux")
-		echo "linux"
-		;;
-	*)
-		console_error "OS [$os] not supported"
-		return 1
-		;;
-	esac
-}
-
 get_arch() {
 	arch=$(uname -m)
 	case $arch in
@@ -91,6 +75,22 @@ get_arch() {
 		;;
 	*)
 		console_error "Arch [$arch] not supported"
+		return 1
+		;;
+	esac
+}
+
+get_os() {
+	os=$(uname -s)
+	case $os in
+	"Darwin")
+		echo "darwin"
+		;;
+	"Linux")
+		echo "linux"
+		;;
+	*)
+		console_error "OS [$os] not supported"
 		return 1
 		;;
 	esac
@@ -111,6 +111,10 @@ read_md5() {
 ##################
 # Github Functions
 ##################
+
+get_latest_version() {
+	curl -fsSL "$GITHUB_API_RELEASES_REPO_URL/releases/latest" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
+}
 
 get_release_filename() {
 	if [[ $# -ne 1 ]]; then
@@ -156,13 +160,9 @@ get_version_remote_md5() {
     echo $md5
 }
 
-get_latest_version() {
-	curl -fsSL "$GITHUB_API_RELEASES_REPO_URL/releases/latest" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
-}
-
-########################
-# Local Warden Structure
-########################
+###########################
+# Warden Dirctory Structure
+###########################
 
 get_version_directory() {
 	if [[ $# -ne 1 ]]; then
@@ -188,6 +188,21 @@ get_version_binary_path() {
 
 get_env_path() {
 	echo "$WARDEN_HOME/env.sh"
+}
+
+#####################
+# Local Install State
+#####################
+
+is_version_installed() {
+	if [[ $# -ne 1 ]]; then
+		console_error "is_version_installed requires arguments: version"
+		return 1
+	fi
+
+    version=$1
+
+	[[ -e "$(get_version_binary_path $version)" ]] && grep -q "$version" "$(get_env_path)" && [[ $WARDEN_VERSION = $version ]]
 }
 
 ####################
@@ -253,14 +268,13 @@ install_warden_version() {
 }
 
 install_version_env() {
-	if [[ ! $# -eq 1 ]]; then
-		console_error "install_version_env requires arguments: version"
+	if [[ ! $# -eq 2 ]]; then
+		console_error "install_version_env requires arguments: version, os_arch"
 		return 1
 	fi
 
 	local version=$1
-
-	OS_ARCH="$(get_os_arch)" # $OS_ARCH is expected to be set by this function
+	local os_arch=$2
 
 	mkdir -p "$(get_version_directory $version)"
 
@@ -330,7 +344,9 @@ EOM
 set_os_specific_commands
 
 if [[ "$1" = "-f" ]]; then
-	force="true"
+	force=1
+else
+	force=0
 fi
 
 version="$(get_latest_version)"
@@ -338,17 +354,18 @@ version="$(get_latest_version)"
 # This must be set first since $WARDEN_HOME is a dependency for all other functions
 WARDEN_HOME="$HOME/.warden"
 
-if ! $force && [[ -e "$(get_version_binary_path $version)" ]] && grep -q "$version" "$(get_env_path)"; then
+if is_version_installed $version && [[ $force -eq 0 ]]; then
 	console_info "The latest version of warden — $version — is already installed"
     exit 0
 fi
 
-# install_version_env sets $OS_ARCH
-if ! install_version_env $version; then
+os_arch="$(get_os_arch)"
+
+if ! install_version_env $version $os_arch; then
 	exit $?
 fi
 
-if ! install_warden_version $version $OS_ARCH; then
+if ! install_warden_version $version $os_arch; then
 	exit $?
 fi
 
