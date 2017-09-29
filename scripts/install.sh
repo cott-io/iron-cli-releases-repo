@@ -282,7 +282,7 @@ install_version_env() {
 
 	cat > "$version_env_path" <<-EOM
 export WARDEN_VERSION="$version"
-export WARDEN_OS_ARCH="$OS_ARCH"
+export WARDEN_OS_ARCH="$os_arch"
 export WARDEN_HOME="$WARDEN_HOME"
 export WARDEN_AUTO_UPDATE_INTERVAL=3600000  # In milliseconds (1 hour)
 WARDEN_PATH="$WARDEN_HOME/bin"
