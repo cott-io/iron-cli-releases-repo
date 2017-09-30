@@ -149,9 +149,9 @@ get_version_remote_md5() {
     local version=$1
 	local os_arch=$2
 
-    md5_url="$(get_version_release_url $version $os_arch).md5"
+    local md5_url="$(get_version_release_url $version $os_arch).md5"
 
-    md5="$(curl -fsSL "$md5_url")"
+    local md5="$(curl -fsSL "$md5_url")"
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
         console_error "Error downloading $md5_url"
         return 1
@@ -170,7 +170,7 @@ get_version_directory() {
 		return 1
 	fi
 
-    version=$1
+    local version=$1
 
     echo "$WARDEN_HOME/versions/$version"
 }
@@ -181,7 +181,7 @@ get_version_binary_path() {
 		return 1
 	fi
 
-    version=$1
+    local version=$1
 
     echo "$(get_version_directory $version)/warden"
 }
@@ -200,9 +200,9 @@ is_version_installed() {
 		return 1
 	fi
 
-    version=$1
+    local version=$1
 
-	[[ -e "$(get_version_binary_path $version)" ]] && grep -q "$version" "$(get_env_path)" && [[ $WARDEN_VERSION = $version ]]
+	[[ -e "$(get_version_binary_path $version)" ]] && grep -q "$version" "$(get_env_path)"
 }
 
 ####################
@@ -239,7 +239,7 @@ install_warden_version() {
     local release_tar_path="$(get_version_directory $version)/$release_filename"
 
     curl -fsSL "$download_url" > $release_tar_path
-    if [[ $? -ne 0 ]]; then
+    if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
         console_error "Error downloading $download_url"
         return 1
     fi
@@ -278,13 +278,13 @@ install_version_env() {
 
 	mkdir -p "$(get_version_directory $version)"
 
-	version_env_path="$(get_version_directory $version)/env.sh"
+	local version_env_path="$(get_version_directory $version)/env.sh"
 
 	cat > "$version_env_path" <<-EOM
 export WARDEN_VERSION="$version"
 export WARDEN_OS_ARCH="$os_arch"
 export WARDEN_HOME="$WARDEN_HOME"
-export WARDEN_AUTO_UPDATE_INTERVAL=3600000  # In milliseconds (1 hour)
+export WARDEN_AUTO_UPDATE_INTERVAL=3600  # In seconds (1 hour)
 WARDEN_PATH="$WARDEN_HOME/bin"
 if [[ "\$PATH" != *"\$WARDEN_PATH"* ]]; then
     export PATH="\$PATH:\$WARDEN_PATH"
@@ -300,8 +300,18 @@ EOM
 }
 
 install_root_env() {
+	if [[ ! $# -eq 1 ]]; then
+		console_error "install_root_env requires arguments: version"
+		return 1
+	fi
+
+	local version=$1
+
+	local version_env_path="$(get_version_directory $version)/env.sh"
+
 	local env_path="$(get_env_path)"
 	cat > "$env_path" <<-EOM
+export WARDEN_LAST_UPDATE_CHECK="$last_update_check"
 source $version_env_path
 EOM
 	
@@ -324,7 +334,7 @@ EOM
 		echo "$add_rc" >> $shell_rc_path
 	fi
 
-		cat <<EOM
+	cat <<EOM
 
 Set the following in $env_path:
 
@@ -343,21 +353,11 @@ EOM
 
 set_os_specific_commands
 
-if [[ "$1" = "-f" ]]; then
-	force=1
-else
-	force=0
-fi
-
-version="$(get_latest_version)"
+version=${1:-$(get_latest_version)}
+last_update_check=$(date +"%s")
 
 # This must be set first since $WARDEN_HOME is a dependency for all other functions
 WARDEN_HOME="$HOME/.warden"
-
-if is_version_installed $version && [[ $force -eq 0 ]]; then
-	console_info "The latest version of warden — $version — is already installed"
-    exit 0
-fi
 
 os_arch="$(get_os_arch)"
 
