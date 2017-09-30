@@ -88,7 +88,7 @@ get_version_directory() {
 		return 1
 	fi
 
-    version=$1
+    local version=$1
 
     echo "$WARDEN_HOME/versions/$version"
 }
@@ -99,13 +99,28 @@ get_version_binary_path() {
 		return 1
 	fi
 
-    version=$1
+    local version=$1
 
     echo "$(get_version_directory $version)/warden"
 }
 
 get_env_path() {
 	echo "$WARDEN_HOME/env.sh"
+}
+
+set_last_update_check() {
+    if [[ $# -ne 1 ]]; then
+		console_error "update_last_update_check requires arguments: time_in_seconds_past_epoch"
+		return 1
+	fi
+
+    local time_in_seconds_past_epoch=$1
+
+    echo $time_in_seconds_past_epoch > "$WARDEN_HOME/check"
+}
+
+get_last_update_check() {
+    [[ -e "$WARDEN_HOME/check" ]] && cat "$WARDEN_HOME/check"
 }
 
 #####################
@@ -118,29 +133,34 @@ is_version_installed() {
 		return 1
 	fi
 
-    version=$1
+    local version=$1
 
-	[[ -e "$(get_version_binary_path $version)" ]] && grep -q "$version" "$(get_env_path)" && [[ $WARDEN_VERSION = $version ]]
+	[[ -e "$(get_version_binary_path $version)" ]] && grep -q "$version" "$(get_env_path)"
 }
-
-
 
 ########
 # Update
 ########
 
-auto_update() {
-	version=$1
+should_update_check() {
+    local now=$(date +"%s")
+    local local_last_check=$(get_last_update_check)
+    local last_update_check=${local_last_check:-$now}
 
-	latest_version="$(get_latest_version)"
+    set_last_update_check $now
 
-	if is_version_installed $latest_version; then
-		return 0
+    [[ $(($last_update_check+$WARDEN_AUTO_UPDATE_INTERVAL)) -le $now ]]
+}
+
+update() {
+    if [[ $# -ne 1 ]]; then
+		console_error "update requires arguments: latest_version"
+		return 1
 	fi
 
-	console_info "The latest version is $latest_version. You are using $version. Updating now..."
+	latest_version=$1
 
-
+    bash <(curl -fsSL https://raw.githubusercontent.com/NoFateLLC/warden-releases/master/scripts/install.sh) $latest_version
 }
 
 ########
@@ -153,9 +173,23 @@ if ! verify_env; then
     exit $?
 fi
 
-if ! is_version_installed $WARDEN_VERSION; then
-    console_error "$WARDEN_VERSION not installed..."
-    exit 1
+cmd="$(get_version_binary_path $WARDEN_VERSION)"
+
+if ! should_update_check; then
+    exec env WARDEN_VERSION=$WARDEN_VERSION $cmd "$@"
 fi
 
-exec "$(get_version_binary_path $WARDEN_VERSION)" "$@"
+latest_version="$(get_latest_version)"
+
+if is_version_installed $latest_version; then
+    exec env WARDEN_VERSION=$latest_version $cmd "$@"
+fi
+
+console_info "The latest version is $latest_version. You are using $WARDEN_VERSION. Updating now..."
+if ! update $latest_version; then
+    console_error "Error updating warden to version $latest_version"
+
+    exec env WARDEN_VERSION=$latest_version $cmd "$@"
+fi
+
+exec env WARDEN_VERSION=$latest_version "$(get_version_binary_path $latest_version)" "$@"
