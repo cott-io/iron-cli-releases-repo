@@ -4,8 +4,7 @@
 # Constants
 ###########
 
-GITHUB_API_RELEASES_REPO_URL="https://api.github.com/repos/NoFateLLC/warden-releases"
-GITHUB_RELEASES_DOWNLOAD_URL="https://github.com/nofatellc/warden-releases/releases/download"
+GITHUB_API_RELEASES_REPO_URL="https://api.github.com/repos/warden-pub/warden-releases"
 
 ##################
 # Console Utilties
