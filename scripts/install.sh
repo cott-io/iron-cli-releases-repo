@@ -311,7 +311,6 @@ install_root_env() {
 
 	local env_path="$(get_env_path)"
 	cat > "$env_path" <<-EOM
-export WARDEN_LAST_UPDATE_CHECK="$last_update_check"
 source $version_env_path
 EOM
 	

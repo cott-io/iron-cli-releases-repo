@@ -173,6 +173,16 @@ if ! verify_env; then
     exit $?
 fi
 
+if [[ $1 == "update" ]]; then
+    latest_version="$(get_latest_version)"
+
+    if ! update $latest_version; then
+        console_error "Error updating warden to version $latest_version"
+        exit 1
+    fi
+    exit
+fi
+
 cmd="$(get_version_binary_path $WARDEN_VERSION)"
 
 if ! should_update_check; then
