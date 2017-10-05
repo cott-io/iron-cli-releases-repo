@@ -6,6 +6,7 @@
 
 GITHUB_API_RELEASES_REPO_URL="https://api.github.com/repos/warden-pub/warden-releases"
 GITHUB_RELEASES_DOWNLOAD_URL="https://github.com/warden-pub/warden-releases/releases/download"
+WARDEN_ADDR=${WARDEN_ADDR:-"alpha.warden.pub:143"}
 
 ##################
 # Console Utilties
@@ -265,6 +266,8 @@ install_warden_version() {
         console_error "Error making $(get_version_binary_path $version) executable"
         return 1
     fi
+
+    
 }
 
 install_version_env() {
@@ -375,5 +378,8 @@ fi
 if ! install_root_env $version; then
 	exit $?
 fi
+
+console_info "Setting service address [$WARDEN_ADDR]"
+"$(get_version_binary_path $version)" config set --remote $WARDEN_ADDR
 
 console_info "Successfully installed warden $version! Please source your environment for changes to take effect (Start a new terminal session)."
