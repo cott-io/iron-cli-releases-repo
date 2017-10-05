@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 
-###########
-# Constants
-###########
-
-GITHUB_API_RELEASES_REPO_URL="https://api.github.com/repos/warden-pub/warden-releases"
-
 ##################
 # Console Utilties
 ##################
@@ -74,7 +68,7 @@ verify_env() {
 ##################
 
 get_latest_version() {
-	curl -fsSL "$GITHUB_API_RELEASES_REPO_URL/releases/latest" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
+	curl -fsSL "https://api.github.com/repos/warden-pub/warden-releases/releases/latest" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
 }
 
 ###########################

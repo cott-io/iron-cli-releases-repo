@@ -4,7 +4,6 @@
 # Constants
 ###########
 
-GITHUB_API_RELEASES_REPO_URL="https://api.github.com/repos/warden-pub/warden-releases"
 GITHUB_RELEASES_DOWNLOAD_URL="https://github.com/warden-pub/warden-releases/releases/download"
 WARDEN_ADDR=${WARDEN_ADDR:-"alpha.warden.pub:143"}
 
@@ -114,7 +113,7 @@ read_md5() {
 ##################
 
 get_latest_version() {
-	curl -fsSL "$GITHUB_API_RELEASES_REPO_URL/releases/latest" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
+	curl -fsSL "https://api.github.com/repos/warden-pub/warden-releases/releases/latest" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
 }
 
 get_release_filename() {
