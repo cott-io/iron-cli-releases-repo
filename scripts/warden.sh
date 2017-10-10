@@ -4,20 +4,35 @@
 # Console Utilties
 ##################
 
+# The repo where the release artifacts are held
+WARDEN_RELEASE_REPO=${WARDEN_RELEASE_REPO:-"https://github.com/warden-pub/warden-releases"}
+
+# The repo where the install/update scripts are held
+WARDEN_SCRIPTS_REPO=${WARDEN_SCRIPTS_REPO:-$WARDEN_RELEASE_REPO}
+
+# The branch of the scripts repo where the install/update scripts are held
+WARDEN_SCRIPTS_REF=${WARDEN_SCRIPTS_REF:-"master"}
+
+# The url of the api call for determining the latest artifact
+WARDEN_LATEST_URL=${WARDEN_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
+
+# The url of the installer script source code
+WARDEN_INSTALL_URL=${WARDEN_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$WARDEN_SCRIPTS_REF/scripts/install.sh
+
 console_info() {
-	if ! tput setaf &>/dev/null; then
-		echo "$1"
-	else
-		echo "$(tput setaf 2)$1$(tput sgr0)"
-	fi
+    if ! tput setaf &>/dev/null; then
+        echo "$1"
+    else
+        echo "$(tput setaf 2)$1$(tput sgr0)"
+    fi
 }
 
 console_error() {
-	if ! tput setaf &>/dev/null; then
-		echo "$1" 1>&2
-	else
-		echo "$(tput setaf 1)$1$(tput sgr0)" 1>&2
-	fi
+    if ! tput setaf &>/dev/null; then
+        echo "$1" 1>&2
+    else
+        echo "$(tput setaf 1)$1$(tput sgr0)" 1>&2
+    fi
 }
 
 ##########################
@@ -25,16 +40,16 @@ console_error() {
 ##########################
 
 set_os_specific_commands() {
-	uname=$(uname)
-	if [[ "$uname" == 'Linux' ]]; then
-		SED_EXTENDED="sed -r"
-		GREP_EXTENDED="grep -P"
-		MD5="md5sum"
-	elif [[ "$uname" == 'Darwin' ]]; then
-		SED_EXTENDED="sed -E"
-		GREP_EXTENDED="grep -E"
-		MD5="md5 -r"
-	fi
+    uname=$(uname)
+    if [[ "$uname" == 'Linux' ]]; then
+        SED_EXTENDED="sed -r"
+        GREP_EXTENDED="grep -P"
+        MD5="md5sum"
+    elif [[ "$uname" == 'Darwin' ]]; then
+        SED_EXTENDED="sed -E"
+        GREP_EXTENDED="grep -E"
+        MD5="md5 -r"
+    fi
 }
 
 #############
@@ -68,7 +83,7 @@ verify_env() {
 ##################
 
 get_latest_version() {
-	curl -fsSL "https://api.github.com/repos/warden-pub/warden-releases/releases/latest" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
+    curl -fsSL "$WARDEN_LATEST_URL" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
 }
 
 ###########################
@@ -76,10 +91,10 @@ get_latest_version() {
 ###########################
 
 get_version_directory() {
-	if [[ $# -ne 1 ]]; then
-		console_error "get_version_directory requires arguments: version"
-		return 1
-	fi
+    if [[ $# -ne 1 ]]; then
+        console_error "get_version_directory requires arguments: version"
+        return 1
+    fi
 
     local version=$1
 
@@ -87,10 +102,10 @@ get_version_directory() {
 }
 
 get_version_binary_path() {
-	if [[ $# -ne 1 ]]; then
-		console_error "get_version_binary_path requires arguments: version"
-		return 1
-	fi
+    if [[ $# -ne 1 ]]; then
+        console_error "get_version_binary_path requires arguments: version"
+        return 1
+    fi
 
     local version=$1
 
@@ -98,14 +113,14 @@ get_version_binary_path() {
 }
 
 get_env_path() {
-	echo "$WARDEN_HOME/env.sh"
+    echo "$WARDEN_HOME/env.sh"
 }
 
 set_last_update_check() {
     if [[ $# -ne 1 ]]; then
-		console_error "update_last_update_check requires arguments: time_in_seconds_past_epoch"
-		return 1
-	fi
+        console_error "update_last_update_check requires arguments: time_in_seconds_past_epoch"
+        return 1
+    fi
 
     local time_in_seconds_past_epoch=$1
 
@@ -121,14 +136,14 @@ get_last_update_check() {
 #####################
 
 is_version_installed() {
-	if [[ $# -ne 1 ]]; then
-		console_error "is_version_installed requires arguments: version"
-		return 1
-	fi
+    if [[ $# -ne 1 ]]; then
+        console_error "is_version_installed requires arguments: version"
+        return 1
+    fi
 
     local version=$1
 
-	[[ -e "$(get_version_binary_path $version)" ]] && grep -q "$version" "$(get_env_path)"
+    [[ -e "$(get_version_binary_path $version)" ]] && grep -q "$version" "$(get_env_path)"
 }
 
 ########
@@ -147,13 +162,13 @@ should_update_check() {
 
 update() {
     if [[ $# -ne 1 ]]; then
-		console_error "update requires arguments: latest_version"
-		return 1
-	fi
+        console_error "update requires arguments: latest_version"
+        return 1
+    fi
 
-	latest_version=$1
+    latest_version=$1
 
-    bash <(curl -fsSL https://raw.githubusercontent.com/NoFateLLC/warden-releases/master/scripts/install.sh) $latest_version
+    bash <(curl -fsSL $WARDEN_INSTALL_URL) $latest_version
 }
 
 ########
