@@ -400,4 +400,7 @@ fi
 console_info "Setting service address [$WARDEN_ADDR]"
 "$(get_version_binary_path $version)" config set --remote $WARDEN_ADDR
 
-console_info "Successfully installed warden $version! Please source your environment for changes to take effect (Start a new terminal session)."
+console_info "Successfully installed warden $version! To complete the installation, please run: "
+echo 
+echo "  source $(get_env_path)"
+echo 
