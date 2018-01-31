@@ -5,25 +5,25 @@
 ###########
 
 # The repo where the release artifacts are held
-WARDEN_RELEASE_REPO=${WARDEN_RELEASE_REPO:-"https://github.com/warden-pub/warden-releases"}
+IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-releases"}
 
 # The repo where the install/update scripts are held
-WARDEN_SCRIPTS_REPO=${WARDEN_SCRIPTS_REPO:-$WARDEN_RELEASE_REPO}
+IRON_SCRIPTS_REPO=${IRON_SCRIPTS_REPO:-$IRON_RELEASE_REPO}
 
 # The branch of the scripts repo where the install/update scripts are held
-WARDEN_SCRIPTS_REF=${WARDEN_SCRIPTS_REF:-"master"}
+IRON_SCRIPTS_REF=${IRON_SCRIPTS_REF:-"master"}
 
 # The url of the api call for determining the latest artifact
-WARDEN_LATEST_URL=${WARDEN_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
+IRON_LATEST_URL=${IRON_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
 
 # The url of the api call for determining the latest artifact
-WARDEN_DOWNLOAD_URL=$WARDEN_RELEASE_REPO/releases/download
+IRON_DOWNLOAD_URL=$IRON_RELEASE_REPO/releases/download
 
 # The url of the wrapper/binary script source code
-WARDEN_BIN_URL=${WARDEN_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$WARDEN_SCRIPTS_REF/scripts/warden.sh
+IRON_BIN_URL=${IRON_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$IRON_SCRIPTS_REF/scripts/iron.sh
 
-# The address to configure for the warden rpc services
-WARDEN_ADDR=${WARDEN_ADDR:-"alpha.warden.pub:143"}
+# The address to configure for the iron rpc services
+IRON_ADDR=${IRON_ADDR:-"dev.iron.cott.io:443"}
 
 ##################
 # Console Utilties
@@ -131,7 +131,7 @@ read_md5() {
 ##################
 
 get_latest_version() {
-    curl -fsSL $WARDEN_LATEST_URL | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
+    curl -fsSL $IRON_LATEST_URL | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
 }
 
 get_release_filename() {
@@ -142,7 +142,7 @@ get_release_filename() {
 
     local os_arch=$1
 
-    echo "warden-$os_arch.tar.gz"
+    echo "iron-$os_arch.tar.gz"
 }
 
 get_version_release_url() {
@@ -155,7 +155,7 @@ get_version_release_url() {
     local os_arch=$2
 
     local release_filename="$(get_release_filename $os_arch)"
-    echo "$WARDEN_DOWNLOAD_URL/$version/$release_filename"
+    echo "$IRON_DOWNLOAD_URL/$version/$release_filename"
 }
 
 get_version_remote_md5() {
@@ -190,7 +190,7 @@ get_version_directory() {
 
     local version=$1
 
-    echo "$WARDEN_HOME/versions/$version"
+    echo "$IRON_HOME/versions/$version"
 }
 
 get_version_binary_path() {
@@ -201,11 +201,11 @@ get_version_binary_path() {
 
     local version=$1
 
-    echo "$(get_version_directory $version)/warden"
+    echo "$(get_version_directory $version)/iron"
 }
 
 get_env_path() {
-    echo "$WARDEN_HOME/env.sh"
+    echo "$IRON_HOME/env.sh"
 }
 
 #####################
@@ -227,27 +227,27 @@ is_version_installed() {
 # Download / Install
 ####################
 
-download_warden_script() {
-    mkdir -p "$WARDEN_HOME/bin"
-    local warden_script_path="$WARDEN_HOME/bin/warden"
-    curl -fsSL "$WARDEN_BIN_URL" > "$warden_script_path"
+download_iron_script() {
+    mkdir -p "$IRON_HOME/bin"
+    local iron_script_path="$IRON_HOME/bin/iron"
+    curl -fsSL "$IRON_BIN_URL" > "$iron_script_path"
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-        console_error "Error downloading [$WARDEN_BIN_URL]"
+        console_error "Error downloading [$IRON_BIN_URL]"
         return 1
     fi
-    chmod +x "$warden_script_path"
+    chmod +x "$iron_script_path"
 }
 
-install_warden_version() {
+install_iron_version() {
     if [[ ! $# -eq 2 ]]; then
-        console_error "install_warden_version requires arguments: version and os_arch"
+        console_error "install_iron_version requires arguments: version and os_arch"
         return 1
     fi
 
     local version=$1
     local os_arch=$2
     
-    console_info "Installing warden version: [$version] platform: [$os_arch]..."
+    console_info "Installing iron version: [$version] platform: [$os_arch]..."
 
     local release_filename="$(get_release_filename $os_arch)"
     local download_url="$(get_version_release_url $version $os_arch)"
@@ -259,7 +259,7 @@ install_warden_version() {
 
     curl -fsSL "$download_url" > $release_tar_path
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-        console_error "Error downloading warden release [$download_url]"
+        console_error "Error downloading iron release [$download_url]"
         return 1
     fi
 
@@ -302,13 +302,13 @@ install_version_env() {
     local version_env_path="$(get_version_directory $version)/env.sh"
 
     cat > "$version_env_path" <<-EOM
-export WARDEN_VERSION="$version"
-export WARDEN_OS_ARCH="$os_arch"
-export WARDEN_HOME="$WARDEN_HOME"
-export WARDEN_AUTO_UPDATE_INTERVAL=3600  # In seconds (1 hour)
-WARDEN_PATH="$WARDEN_HOME/bin"
-if [[ "\$PATH" != *"\$WARDEN_PATH"* ]]; then
-    export PATH="\$PATH:\$WARDEN_PATH"
+export IRON_VERSION="$version"
+export IRON_OS_ARCH="$os_arch"
+export IRON_HOME="$IRON_HOME"
+export IRON_AUTO_UPDATE_INTERVAL=3600  # In seconds (1 hour)
+IRON_PATH="$IRON_HOME/bin"
+if [[ "\$PATH" != *"\$IRON_PATH"* ]]; then
+    export PATH="\$PATH:\$IRON_PATH"
 fi
 EOM
 
@@ -346,7 +346,7 @@ EOM
 
     read -r -d '' add_rc <<EOM
 
-# Added by warden
+# Added by iron
 $source_line
 EOM
 
@@ -376,8 +376,8 @@ set_os_specific_commands
 version=${1:-$(get_latest_version)}
 last_update_check=$(date +"%s")
 
-# This must be set first since $WARDEN_HOME is a dependency for all other functions
-WARDEN_HOME="$HOME/.warden"
+# This must be set first since $IRON_HOME is a dependency for all other functions
+IRON_HOME="$HOME/.iron"
 
 os_arch="$(get_os_arch)"
 
@@ -385,11 +385,11 @@ if ! install_version_env $version $os_arch; then
     exit $?
 fi
 
-if ! install_warden_version $version $os_arch; then
+if ! install_iron_version $version $os_arch; then
     exit $?
 fi
 
-if ! download_warden_script $version; then
+if ! download_iron_script $version; then
     exit $?
 fi
 
@@ -397,10 +397,10 @@ if ! install_root_env $version; then
     exit $?
 fi
 
-console_info "Setting service address [$WARDEN_ADDR]"
-"$(get_version_binary_path $version)" config set --remote $WARDEN_ADDR
+console_info "Setting service address [$IRON_ADDR]"
+"$(get_version_binary_path $version)" config set --remote $IRON_ADDR
 
-console_info "Successfully installed warden $version! To complete the installation, please run: "
+console_info "Successfully installed iron $version! To complete the installation, please run: "
 echo 
 echo "  source $(get_env_path)"
 echo 

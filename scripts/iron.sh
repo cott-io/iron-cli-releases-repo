@@ -5,19 +5,19 @@
 ##################
 
 # The repo where the release artifacts are held
-WARDEN_RELEASE_REPO=${WARDEN_RELEASE_REPO:-"https://github.com/warden-pub/warden-releases"}
+IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-releases"}
 
 # The repo where the install/update scripts are held
-WARDEN_SCRIPTS_REPO=${WARDEN_SCRIPTS_REPO:-$WARDEN_RELEASE_REPO}
+IRON_SCRIPTS_REPO=${IRON_SCRIPTS_REPO:-$IRON_RELEASE_REPO}
 
 # The branch of the scripts repo where the install/update scripts are held
-WARDEN_SCRIPTS_REF=${WARDEN_SCRIPTS_REF:-"master"}
+IRON_SCRIPTS_REF=${IRON_SCRIPTS_REF:-"master"}
 
 # The url of the api call for determining the latest artifact
-WARDEN_LATEST_URL=${WARDEN_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
+IRON_LATEST_URL=${IRON_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
 
 # The url of the installer script source code
-WARDEN_INSTALL_URL=${WARDEN_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$WARDEN_SCRIPTS_REF/scripts/install.sh
+IRON_INSTALL_URL=${IRON_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$IRON_SCRIPTS_REF/scripts/install.sh
 
 console_info() {
     if ! tput setaf &>/dev/null; then
@@ -57,23 +57,23 @@ set_os_specific_commands() {
 #############
 
 verify_env() {
-    if [[ -z "$WARDEN_HOME" ]]; then
-        console_error "WARDEN_HOME not set..."
+    if [[ -z "$IRON_HOME" ]]; then
+        console_error "IRON_HOME not set..."
         return 1
     fi
 
-    if [[ -z "$WARDEN_OS_ARCH" ]]; then
-        console_error "WARDEN_OS_ARCH not set..."
+    if [[ -z "$IRON_OS_ARCH" ]]; then
+        console_error "IRON_OS_ARCH not set..."
         return 1
     fi
 
-    if [[ -z "$WARDEN_VERSION" ]]; then
-        console_error "WARDEN_VERSION not set..."
+    if [[ -z "$IRON_VERSION" ]]; then
+        console_error "IRON_VERSION not set..."
         return 1
     fi
 
-    if [[ -z "$WARDEN_AUTO_UPDATE_INTERVAL" ]]; then
-        console_error "WARDEN_AUTO_UPDATE_INTERVAL not set..."
+    if [[ -z "$IRON_AUTO_UPDATE_INTERVAL" ]]; then
+        console_error "IRON_AUTO_UPDATE_INTERVAL not set..."
         return 1
     fi
 }
@@ -83,7 +83,7 @@ verify_env() {
 ##################
 
 get_latest_version() {
-    curl -fsSL "$WARDEN_LATEST_URL" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
+    curl -fsSL "$IRON_LATEST_URL" | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
 }
 
 ###########################
@@ -98,7 +98,7 @@ get_version_directory() {
 
     local version=$1
 
-    echo "$WARDEN_HOME/versions/$version"
+    echo "$IRON_HOME/versions/$version"
 }
 
 get_version_binary_path() {
@@ -109,11 +109,11 @@ get_version_binary_path() {
 
     local version=$1
 
-    echo "$(get_version_directory $version)/warden"
+    echo "$(get_version_directory $version)/iron"
 }
 
 get_env_path() {
-    echo "$WARDEN_HOME/env.sh"
+    echo "$IRON_HOME/env.sh"
 }
 
 set_last_update_check() {
@@ -124,11 +124,11 @@ set_last_update_check() {
 
     local time_in_seconds_past_epoch=$1
 
-    echo $time_in_seconds_past_epoch > "$WARDEN_HOME/check"
+    echo $time_in_seconds_past_epoch > "$IRON_HOME/check"
 }
 
 get_last_update_check() {
-    [[ -e "$WARDEN_HOME/check" ]] && cat "$WARDEN_HOME/check"
+    [[ -e "$IRON_HOME/check" ]] && cat "$IRON_HOME/check"
 }
 
 #####################
@@ -157,7 +157,7 @@ should_update_check() {
 
     set_last_update_check $now
 
-    [[ $(($last_update_check+$WARDEN_AUTO_UPDATE_INTERVAL)) -le $now ]]
+    [[ $(($last_update_check+$IRON_AUTO_UPDATE_INTERVAL)) -le $now ]]
 }
 
 update() {
@@ -168,7 +168,7 @@ update() {
 
     latest_version=$1
 
-    bash <(curl -fsSL $WARDEN_INSTALL_URL) $latest_version
+    bash <(curl -fsSL $IRON_INSTALL_URL) $latest_version
 }
 
 ########
@@ -185,29 +185,29 @@ if [[ $1 == "update" ]]; then
     latest_version="$(get_latest_version)"
 
     if ! update $latest_version; then
-        console_error "Error updating warden to version $latest_version"
+        console_error "Error updating iron to version $latest_version"
         exit 1
     fi
     exit
 fi
 
-cmd="$(get_version_binary_path $WARDEN_VERSION)"
+cmd="$(get_version_binary_path $IRON_VERSION)"
 
 if ! should_update_check; then
-    exec env WARDEN_VERSION=$WARDEN_VERSION $cmd "$@"
+    exec env IRON_VERSION=$IRON_VERSION $cmd "$@"
 fi
 
 latest_version="$(get_latest_version)"
 
 if is_version_installed $latest_version; then
-    exec env WARDEN_VERSION=$latest_version $cmd "$@"
+    exec env IRON_VERSION=$latest_version $cmd "$@"
 fi
 
-console_info "The latest version is $latest_version. You are using $WARDEN_VERSION. Updating now..."
+console_info "The latest version is $latest_version. You are using $IRON_VERSION. Updating now..."
 if ! update $latest_version; then
-    console_error "Error updating warden to version $latest_version"
+    console_error "Error updating iron to version $latest_version"
 
-    exec env WARDEN_VERSION=$latest_version $cmd "$@"
+    exec env IRON_VERSION=$latest_version $cmd "$@"
 fi
 
-exec env WARDEN_VERSION=$latest_version "$(get_version_binary_path $latest_version)" "$@"
+exec env IRON_VERSION=$latest_version "$(get_version_binary_path $latest_version)" "$@"
