@@ -109,7 +109,7 @@ get_version_binary_path() {
 
     local version=$1
 
-    echo "$(get_version_directory $version)/iron"
+    echo "$(get_version_directory $version)/fe"
 }
 
 get_env_path() {

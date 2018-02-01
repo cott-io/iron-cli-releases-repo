@@ -229,7 +229,7 @@ is_version_installed() {
 
 download_iron_script() {
     mkdir -p "$IRON_HOME/bin"
-    local iron_script_path="$IRON_HOME/bin/iron"
+    local iron_script_path="$IRON_HOME/bin/fe"
     curl -fsSL "$IRON_BIN_URL" > "$iron_script_path"
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
         console_error "Error downloading [$IRON_BIN_URL]"
