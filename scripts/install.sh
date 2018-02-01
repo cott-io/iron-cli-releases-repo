@@ -20,10 +20,10 @@ IRON_LATEST_URL=${IRON_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.co
 IRON_DOWNLOAD_URL=$IRON_RELEASE_REPO/releases/download
 
 # The url of the wrapper/binary script source code
-IRON_BIN_URL=${IRON_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$IRON_SCRIPTS_REF/scripts/iron.sh
+IRON_BIN_URL=${IRON_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$IRON_SCRIPTS_REF/scripts/fe.sh
 
 # The address to configure for the iron rpc services
-IRON_ADDR=${IRON_ADDR:-"dev.iron.cott.io:443"}
+IRON_ADDR=${IRON_ADDR:-"dev.cott.io:443"}
 
 ##################
 # Console Utilties
@@ -201,7 +201,7 @@ get_version_binary_path() {
 
     local version=$1
 
-    echo "$(get_version_directory $version)/iron"
+    echo "$(get_version_directory $version)/fe"
 }
 
 get_env_path() {
@@ -377,7 +377,7 @@ version=${1:-$(get_latest_version)}
 last_update_check=$(date +"%s")
 
 # This must be set first since $IRON_HOME is a dependency for all other functions
-IRON_HOME="$HOME/.iron"
+IRON_HOME="$HOME/.cott"
 
 os_arch="$(get_os_arch)"
 
