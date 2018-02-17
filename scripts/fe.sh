@@ -7,9 +7,6 @@
 # The repo where the release artifacts are held
 IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-releases"}
 
-# The repo where the install/update scripts are held
-IRON_SCRIPTS_REPO=${IRON_SCRIPTS_REPO:-$IRON_RELEASE_REPO}
-
 # The branch of the scripts repo where the install/update scripts are held
 IRON_SCRIPTS_REF=${IRON_SCRIPTS_REF:-"master"}
 
@@ -17,7 +14,7 @@ IRON_SCRIPTS_REF=${IRON_SCRIPTS_REF:-"master"}
 IRON_LATEST_URL=${IRON_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
 
 # The url of the installer script source code
-IRON_INSTALL_URL=${IRON_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$IRON_SCRIPTS_REF/scripts/install.sh
+IRON_INSTALL_URL=${IRON_INSTALL_URL:-"https://cott-io.github.io/install.sh"}
 
 console_info() {
     if ! tput setaf &>/dev/null; then
