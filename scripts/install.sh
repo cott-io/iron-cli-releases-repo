@@ -403,7 +403,7 @@ fi
 console_info "Setting api address [$IRON_ADDR]"
 "$(get_version_binary_path $version)" config set --remote $IRON_ADDR
 
-console_info "Setting rpc address [$IRON_ADDR]"
+console_info "Setting rpc address [$IRON_MSG_ADDR]"
 "$(get_version_binary_path $version)" config set --message $IRON_MSG_ADDR
 
 console_info "Successfully installed iron $version! To complete the installation, please run: "
