@@ -22,8 +22,11 @@ IRON_DOWNLOAD_URL=$IRON_RELEASE_REPO/releases/download
 # The url of the wrapper/binary script source code
 IRON_BIN_URL=${IRON_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$IRON_SCRIPTS_REF/scripts/fe.sh
 
-# The address to configure for the iron rpc services
+# The address to configure for the iron api 
 IRON_ADDR=${IRON_ADDR:-"dev.cott.io:443"}
+
+# The address to configure for the iron rpc services
+IRON_MSG_ADDR=${IRON_MSG_ADDR:-"dev.cott.io:143"}
 
 ##################
 # Console Utilties
@@ -397,8 +400,11 @@ if ! install_root_env $version; then
     exit $?
 fi
 
-console_info "Setting service address [$IRON_ADDR]"
+console_info "Setting api address [$IRON_ADDR]"
 "$(get_version_binary_path $version)" config set --remote $IRON_ADDR
+
+console_info "Setting rpc address [$IRON_ADDR]"
+"$(get_version_binary_path $version)" config set --message $IRON_MSG_ADDR
 
 console_info "Successfully installed iron $version! To complete the installation, please run: "
 echo 
