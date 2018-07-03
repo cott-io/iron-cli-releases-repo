@@ -14,7 +14,7 @@ IRON_SCRIPTS_REF=${IRON_SCRIPTS_REF:-"master"}
 IRON_LATEST_URL=${IRON_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
 
 # The url of the installer script source code
-IRON_INSTALL_URL=${IRON_INSTALL_URL:-"https://cott-io.github.io/install.sh"}
+IRON_INSTALL_URL=${IRON_INSTALL_URL:-"https://dev.cott.io/docs/install.sh"}
 
 console_info() {
     if ! tput setaf &>/dev/null; then
