@@ -249,7 +249,6 @@ install_iron_version() {
 
     local version=$1
     local os_arch=$2
-    
     console_info "Installing iron version: [$version] platform: [$os_arch]..."
 
     local release_filename="$(get_release_filename $os_arch)"
@@ -260,6 +259,7 @@ install_iron_version() {
 
     local release_tar_path="$(get_version_directory $version)/$release_filename"
 
+    echo "Downloading binary [$download_url]"
     curl -fsSL "$download_url" > $release_tar_path
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
         console_error "Error downloading iron release [$download_url]"
@@ -314,13 +314,6 @@ if [[ "\$PATH" != *"\$IRON_PATH"* ]]; then
     export PATH="\$PATH:\$IRON_PATH"
 fi
 EOM
-
-    cat <<EOM
-Set the following in $version_env_path:
-
-$(cat $version_env_path)
-
-EOM
 }
 
 install_root_env() {
@@ -357,17 +350,8 @@ EOM
         echo "$add_rc" >> $shell_rc_path
     fi
 
-    cat <<EOM
 
-Set the following in $env_path:
-
-$(cat $env_path)
-
-Added the following to $shell_rc_path:
-
-$add_rc
-
-EOM
+echo "Updated $shell_rc_path"
 }
 
 ########
@@ -400,16 +384,18 @@ if ! install_root_env $version; then
     exit $?
 fi
 
-console_info "Setting api address [$IRON_ADDR]"
-"$(get_version_binary_path $version)" config set --remote $IRON_ADDR
+echo "Setting api address [$IRON_ADDR]"
+"$(get_version_binary_path $version)" config set --api-addr $IRON_ADDR >/dev/null
 
-console_info "Setting rpc address [$IRON_MSG_ADDR]"
-"$(get_version_binary_path $version)" config set --message $IRON_MSG_ADDR
+echo "Setting rpc address [$IRON_MSG_ADDR]"
+"$(get_version_binary_path $version)" config set --msg-addr $IRON_MSG_ADDR >/dev/null
 
-console_info "Setting log level [Off]"
-"$(get_version_binary_path $version)" config set --logging Off
+echo "Setting log level [Off]"
+"$(get_version_binary_path $version)" config set --logging Off >/dev/null
 
-console_info "Successfully installed iron $version! To complete the installation, please run: "
+echo "Successfully installed iron $version!"
 echo 
-echo "  source $(get_env_path)"
+echo "To complete the installation, please run:"
+echo 
+console_info "  source $(get_env_path)"
 echo 
