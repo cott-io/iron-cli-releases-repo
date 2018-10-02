@@ -301,7 +301,7 @@ install_iron_version() {
     #local downloaded_tar_md5="$($MD5 $release_tar_path | read_md5)"
     #local remote_tar_md5="$(get_version_remote_md5 $version $os_arch | read_md5)"
     local downloaded_zip_sha512="$($SHA512 $release_zip_path | read_sha512)"
-    local remote_zip_sha512="$(get_version_remote_sha412 $version $os_arch | read_sha512)"
+    local remote_zip_sha512="$(get_version_remote_sha512 $version $os_arch | read_sha512)"
 
 
     #if [[ "$downloaded_tar_md5" != "$remote_tar_md5" ]]; then
@@ -317,7 +317,7 @@ install_iron_version() {
     fi
 
 
-    unzio $release_zip_path -d "$(get_version_directory $version)"
+    unzip $release_zip_path -d "$(get_version_directory $version)"
     if [[ $? -ne 0 ]]; then
         console_error "Error extracting zip $release_zip_path"
         return 1
