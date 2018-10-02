@@ -57,11 +57,13 @@ set_os_specific_commands() {
     if [[ "$uname" == 'Linux' ]]; then
         SED_EXTENDED="sed -r"
         GREP_EXTENDED="grep -P"
-        MD5="md5sum"
+        #MD5="md5sum"
+        SHA512="sha512sum"
     elif [[ "$uname" == 'Darwin' ]]; then
         SED_EXTENDED="sed -E"
         GREP_EXTENDED="grep -E"
-        MD5="md5 -r"
+        #MD5="md5 -r"
+        SHA512="shasum -a 512"
     fi
 }
 
@@ -94,6 +96,9 @@ get_arch() {
     "i386")
         echo "386"
         ;;
+    "arm")
+        echo "arm"
+        ;;
     *)
         console_error "Arch [$arch] not supported"
         return 1
@@ -125,9 +130,14 @@ get_os_arch() {
 # Utilities
 ###########
 
-read_md5() {
+#read_md5() {
+#    $GREP_EXTENDED -o "^\w+"
+#}
+
+read_sha512() {
     $GREP_EXTENDED -o "^\w+"
 }
+
 
 ##################
 # Github Functions
@@ -145,7 +155,7 @@ get_release_filename() {
 
     local os_arch=$1
 
-    echo "iron-$os_arch.tar.gz"
+    echo "iron-$os_arch.zip"
 }
 
 get_version_release_url() {
@@ -161,25 +171,46 @@ get_version_release_url() {
     echo "$IRON_DOWNLOAD_URL/$version/$release_filename"
 }
 
-get_version_remote_md5() {
+#get_version_remote_md5() {
+#    if [[ $# -ne 2 ]]; then
+#        console_error "get_version_remote_md5 requires arguments: version, os_arch"
+#        return 1
+#    fi
+
+#    local version=$1
+#    local os_arch=$2
+
+#    local md5_url="$(get_version_release_url $version $os_arch).md5"
+
+#    local md5="$(curl -fsSL "$md5_url")"
+#    if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+#        console_error "Error downloading $md5_url"
+#        return 1
+#    fi
+
+#    echo $md5
+#}
+
+get_version_remote_sha512() {
     if [[ $# -ne 2 ]]; then
-        console_error "get_version_remote_md5 requires arguments: version, os_arch"
+        console_error "get_version_remote_sha512 requires arguments: version, os_arch"
         return 1
     fi
 
     local version=$1
     local os_arch=$2
 
-    local md5_url="$(get_version_release_url $version $os_arch).md5"
+    local sha512_url="$(get_version_release_url $version $os_arch).sha512"
 
-    local md5="$(curl -fsSL "$md5_url")"
+    local sha512="$(curl -fsSL "$sha512_url")"
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-        console_error "Error downloading $md5_url"
+        console_error "Error downloading $sha512_url"
         return 1
     fi
 
-    echo $md5
+    echo $sha512
 }
+
 
 ###########################
 # Warden Dirctory Structure
@@ -257,28 +288,38 @@ install_iron_version() {
 
     mkdir -p "$(get_version_directory $version)"
 
-    local release_tar_path="$(get_version_directory $version)/$release_filename"
+    local release_zip_path="$(get_version_directory $version)/$release_filename"
 
     echo "Downloading binary [$download_url]"
-    curl -fsSL "$download_url" > $release_tar_path
+    curl -fsSL "$download_url" > $release_zip_path
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
         console_error "Error downloading iron release [$download_url]"
         return 1
     fi
 
     # $MD5 $release_tar_path > "$(get_version_directory $version)/$release_filename.md5"
-    local downloaded_tar_md5="$($MD5 $release_tar_path | read_md5)"
-    local remote_tar_md5="$(get_version_remote_md5 $version $os_arch | read_md5)"
+    #local downloaded_tar_md5="$($MD5 $release_tar_path | read_md5)"
+    #local remote_tar_md5="$(get_version_remote_md5 $version $os_arch | read_md5)"
+    local downloaded_zip_sha512="$($SHA512 $release_zip_path | read_sha512)"
+    local remote_zip_sha512="$(get_version_remote_sha412 $version $os_arch | read_sha512)"
 
-    if [[ "$downloaded_tar_md5" != "$remote_tar_md5" ]]; then
-        rm $release_tar_path
-        console_error "Downloaded $release_filename MD5 [$downloaded_tar_md5] does not match remote MD5 [$remote_tar_md5]"
+
+    #if [[ "$downloaded_tar_md5" != "$remote_tar_md5" ]]; then
+    #    rm $release_tar_path
+    #    console_error "Downloaded $release_filename MD5 [$downloaded_tar_md5] does not match remote MD5 [$remote_tar_md5]"
+    #    return 1
+    #fi
+
+    if [[ "$downloaded_zip_sha512" != "$remote_zip_sha512" ]]; then
+        rm $release_zip_path
+        console_error "Downloaded $release_filename SHA512 [$downloaded_zip_sha512] does not match remote SHA512 [$remote_zip_sha512]"
         return 1
     fi
 
-    tar -xf $release_tar_path -C "$(get_version_directory $version)"
+
+    unzio $release_zip_path -d "$(get_version_directory $version)"
     if [[ $? -ne 0 ]]; then
-        console_error "Error extracting tar $release_tar_path"
+        console_error "Error extracting zip $release_zip_path"
         return 1
     fi
 
