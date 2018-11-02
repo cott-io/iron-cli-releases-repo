@@ -5,30 +5,30 @@
 ###########
 
 # The repo where the artifacts are held
-IRON_REPO=""
-if [ "$1" -ne ""]; then
-	case $1 in
-		-n )	IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-nightly-repo"}
-			;;
-		-f )	IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-features-repo"}
-			;;
-	esac
-	shift
-else
-	IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-releases"}
-fi
+case $1 in
+	-n )	IRON_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-nightly-repo"}
+		shift
+		version=$1
+		;;
+	-f )	IRON_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-features-repo"}
+		shift
+		version=$1
+		;;
+	* )	IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-releases"}
+		version=$1
+esac
 
 # The repo where the install/update scripts are held
-IRON_SCRIPTS_REPO=${IRON_SCRIPTS_REPO:-$IRON_RELEASE_REPO}
+IRON_SCRIPTS_REPO=${IRON_SCRIPTS_REPO:-$IRON_REPO}
 
 # The branch of the scripts repo where the install/update scripts are held
 IRON_SCRIPTS_REF=${IRON_SCRIPTS_REF:-"master"}
 
 # The url of the api call for determining the latest artifact
-IRON_LATEST_URL=${IRON_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
+IRON_LATEST_URL=${IRON_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
 
 # The url of the api call for determining the latest artifact
-IRON_DOWNLOAD_URL=$IRON_RELEASE_REPO/releases/download
+IRON_DOWNLOAD_URL=$IRON_REPO/releases/download
 
 # The url of the wrapper/binary script source code
 IRON_BIN_URL=${IRON_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$IRON_SCRIPTS_REF/scripts/fe.sh
@@ -294,7 +294,6 @@ install_iron_version() {
         return 1
     fi
 
-
     unzip $release_zip_path -d "$(get_version_directory $version)"
     if [[ $? -ne 0 ]]; then
         console_error "Error extracting zip $release_zip_path"
@@ -378,8 +377,12 @@ echo "Updated $shell_rc_path"
 ########
 
 set_os_specific_commands
-
-version=${1:-$(get_latest_version)}
+if [[ "$version" != "" ]]; then
+	version=$version
+else
+	version=${1:-$(get_latest_version)}
+fi
+#version=${1:-$(get_latest_version)}
 
 last_update_check=$(date +"%s")
 
