@@ -4,8 +4,19 @@
 # Constants
 ###########
 
-# The repo where the release artifacts are held
-IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-releases"}
+# The repo where the artifacts are held
+IRON_REPO=""
+if [ "$1" -ne ""]; then
+	case $1 in
+		-n )	IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-nightly-repo"}
+			;;
+		-f )	IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-features-repo"}
+			;;
+	esac
+	shift
+else
+	IRON_RELEASE_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-releases"}
+fi
 
 # The repo where the install/update scripts are held
 IRON_SCRIPTS_REPO=${IRON_SCRIPTS_REPO:-$IRON_RELEASE_REPO}
@@ -27,6 +38,9 @@ IRON_ADDR=${IRON_ADDR:-"dev.cott.io:443"}
 
 # The address to configure for the iron rpc services
 IRON_MSG_ADDR=${IRON_MSG_ADDR:-"dev.cott.io:143"}
+
+# The address to configure for the iron net services
+IRON_NET_ADDR=${IRON_NET_ADDR:-"dev.cott.io:43"}
 
 ##################
 # Console Utilties
@@ -57,12 +71,10 @@ set_os_specific_commands() {
     if [[ "$uname" == 'Linux' ]]; then
         SED_EXTENDED="sed -r"
         GREP_EXTENDED="grep -P"
-        #MD5="md5sum"
         SHA512="sha512sum"
     elif [[ "$uname" == 'Darwin' ]]; then
         SED_EXTENDED="sed -E"
         GREP_EXTENDED="grep -E"
-        #MD5="md5 -r"
         SHA512="shasum -a 512"
     fi
 }
@@ -130,10 +142,6 @@ get_os_arch() {
 # Utilities
 ###########
 
-#read_md5() {
-#    $GREP_EXTENDED -o "^\w+"
-#}
-
 read_sha512() {
     $GREP_EXTENDED -o "^\w+"
 }
@@ -170,26 +178,6 @@ get_version_release_url() {
     local release_filename="$(get_release_filename $os_arch)"
     echo "$IRON_DOWNLOAD_URL/$version/$release_filename"
 }
-
-#get_version_remote_md5() {
-#    if [[ $# -ne 2 ]]; then
-#        console_error "get_version_remote_md5 requires arguments: version, os_arch"
-#        return 1
-#    fi
-
-#    local version=$1
-#    local os_arch=$2
-
-#    local md5_url="$(get_version_release_url $version $os_arch).md5"
-
-#    local md5="$(curl -fsSL "$md5_url")"
-#    if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-#        console_error "Error downloading $md5_url"
-#        return 1
-#    fi
-
-#    echo $md5
-#}
 
 get_version_remote_sha512() {
     if [[ $# -ne 2 ]]; then
@@ -297,18 +285,8 @@ install_iron_version() {
         return 1
     fi
 
-    # $MD5 $release_tar_path > "$(get_version_directory $version)/$release_filename.md5"
-    #local downloaded_tar_md5="$($MD5 $release_tar_path | read_md5)"
-    #local remote_tar_md5="$(get_version_remote_md5 $version $os_arch | read_md5)"
     local downloaded_zip_sha512="$($SHA512 $release_zip_path | read_sha512)"
     local remote_zip_sha512="$(get_version_remote_sha512 $version $os_arch | read_sha512)"
-
-
-    #if [[ "$downloaded_tar_md5" != "$remote_tar_md5" ]]; then
-    #    rm $release_tar_path
-    #    console_error "Downloaded $release_filename MD5 [$downloaded_tar_md5] does not match remote MD5 [$remote_tar_md5]"
-    #    return 1
-    #fi
 
     if [[ "$downloaded_zip_sha512" != "$remote_zip_sha512" ]]; then
         rm $release_zip_path
@@ -402,6 +380,7 @@ echo "Updated $shell_rc_path"
 set_os_specific_commands
 
 version=${1:-$(get_latest_version)}
+
 last_update_check=$(date +"%s")
 
 # This must be set first since $IRON_HOME is a dependency for all other functions
@@ -425,14 +404,18 @@ if ! install_root_env $version; then
     exit $?
 fi
 
-echo "Setting api address [$IRON_ADDR]"
-"$(get_version_binary_path $version)" config set --api-addr $IRON_ADDR >/dev/null
-
-echo "Setting rpc address [$IRON_MSG_ADDR]"
-"$(get_version_binary_path $version)" config set --msg-addr $IRON_MSG_ADDR >/dev/null
-
-echo "Setting log level [Off]"
-"$(get_version_binary_path $version)" config set --logging Off >/dev/null
+cat > $IRON_HOME/config.toml <<-EOM
+Display = ""
+Editor = ""
+Format = ""
+Strength = ""
+ApiAddr = "$IRON_ADDR"
+MsgAddr = "$IRON_MSG_ADDR"
+NetAddr = "$IRON_NET_ADDR"
+Color = ""
+Logging = "Off"
+LoginHeader = ""
+EOM
 
 echo "Successfully installed iron $version!"
 echo 
