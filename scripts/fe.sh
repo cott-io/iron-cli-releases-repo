@@ -69,6 +69,11 @@ verify_env() {
         return 1
     fi
 
+    if [[ -z "$IRON_UPDATE" ]]; then
+        console_error "IRON_UPDATE not set..."
+        return 1
+    fi
+
     if [[ -z "$IRON_AUTO_UPDATE_INTERVAL" ]]; then
         console_error "IRON_AUTO_UPDATE_INTERVAL not set..."
         return 1
@@ -148,6 +153,10 @@ is_version_installed() {
 ########
 
 should_update_check() {
+    if ! ${IRON_UPDATE:-true}; then
+        return 1
+    fi
+
     local now=$(date +"%s")
     local local_last_check=$(get_last_update_check)
     local last_update_check=${local_last_check:-$now}

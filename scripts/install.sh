@@ -6,16 +6,19 @@
 
 # The repo where the artifacts are held
 case $1 in
-	-n )	IRON_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-nightly-repo"}
-		shift
-		version=$1
-		;;
-	-f )	IRON_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-features-repo"}
-		shift
-		version=$1
-		;;
-	* )	IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-releases"}
-		version=$1
+    -n ) IRON_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-nightly-repo"}
+        shift
+        version=$1
+        IRON_UPDATE="false"
+        ;;
+    -f ) IRON_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-features-repo"}
+        shift
+        version=$1
+        IRON_UPDATE="false"
+        ;;
+    * ) IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-releases"}
+        version=$1
+        IRON_UPDATE="true"
 esac
 
 # The repo where the install/update scripts are held
@@ -326,6 +329,7 @@ install_version_env() {
 export IRON_VERSION="$version"
 export IRON_OS_ARCH="$os_arch"
 export IRON_HOME="$IRON_HOME"
+export IRON_UPDATE="$IRON_UPDATE"
 export IRON_AUTO_UPDATE_INTERVAL=3600  # In seconds (1 hour)
 IRON_PATH="$IRON_HOME/bin"
 if [[ "\$PATH" != *"\$IRON_PATH"* ]]; then
@@ -378,9 +382,9 @@ echo "Updated $shell_rc_path"
 
 set_os_specific_commands
 if [[ "$version" != "" ]]; then
-	version=$version
+    version=$version
 else
-	version=${1:-$(get_latest_version)}
+    version=${1:-$(get_latest_version)}
 fi
 #version=${1:-$(get_latest_version)}
 
