@@ -14,7 +14,7 @@ IRON_SCRIPTS_REF=${IRON_SCRIPTS_REF:-"master"}
 IRON_LATEST_URL=${IRON_RELEASE_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
 
 # The url of the installer script source code
-IRON_INSTALL_URL=${IRON_INSTALL_URL:-"https://dev.cott.io/docs/install.sh"}
+IRON_INSTALL_URL=${IRON_RELEASE_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/master/scripts/fe.sh
 
 console_info() {
     if ! tput setaf &>/dev/null; then
@@ -69,8 +69,8 @@ verify_env() {
         return 1
     fi
 
-    if [[ -z "$IRON_UPDATE" ]]; then
-        console_error "IRON_UPDATE not set..."
+    if [[ -z "$IRON_AUTO_UPDATE" ]]; then
+        console_error "IRON_AUTO_UPDATE not set..."
         return 1
     fi
 
@@ -153,7 +153,7 @@ is_version_installed() {
 ########
 
 should_update_check() {
-    if ! ${IRON_UPDATE:-true}; then
+    if ! ${IRON_AUTO_UPDATE:-true}; then
         return 1
     fi
 

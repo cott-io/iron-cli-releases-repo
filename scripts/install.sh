@@ -4,22 +4,43 @@
 # Constants
 ###########
 
-# The repo where the artifacts are held
-case $1 in
-    -n ) IRON_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-nightly-repo"}
-        shift
-        version=$1
-        IRON_UPDATE="false"
-        ;;
-    -f ) IRON_REPO=${IRON_RELEASE_REPO:-"https://github.com/cott-io/iron-features-repo"}
-        shift
-        version=$1
-        IRON_UPDATE="false"
-        ;;
-    * ) IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-releases"}
-        version=$1
-        IRON_UPDATE="true"
-esac
+# Process the inputs
+while (( $# > 0 )); do
+    case $1 in
+        --full )
+            IRON_ARTIFACT="full"
+            ;;
+        --min )
+            IRON_ARTIFACT="min"
+            ;;
+        -n )
+            IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-nightly-repo"}
+            shift
+            version=$1
+            IRON_AUTO_UPDATE="false"
+            ;;
+        -f )
+            IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-features-repo"}
+            shift
+            version=$1
+            IRON_AUTO_UPDATE="false"
+            ;;
+        * )
+            IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-releases"}
+            version=$1
+            IRON_AUTO_UPDATE="true"
+    esac
+    shift
+done
+
+# The default repository that hosts the artifacts
+IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-releases"}
+
+# The repo where the install/update scripts are held
+IRON_ARTIFACT=${IRON_ARTIFACT:-"min"}
+
+# By default, turn on auto updating
+IRON_AUTO_UPDATE=${IRON_AUTO_UPDATE:-"true"}
 
 # The repo where the install/update scripts are held
 IRON_SCRIPTS_REPO=${IRON_SCRIPTS_REPO:-$IRON_REPO}
@@ -166,7 +187,7 @@ get_release_filename() {
 
     local os_arch=$1
 
-    echo "iron-$os_arch.zip"
+    echo "iron-$os_arch-$IRON_ARTIFACT.zip"
 }
 
 get_version_release_url() {
@@ -291,13 +312,15 @@ install_iron_version() {
     local downloaded_zip_sha512="$($SHA512 $release_zip_path | read_sha512)"
     local remote_zip_sha512="$(get_version_remote_sha512 $version $os_arch | read_sha512)"
 
+    echo "Verifying download"
     if [[ "$downloaded_zip_sha512" != "$remote_zip_sha512" ]]; then
         rm $release_zip_path
         console_error "Downloaded $release_filename SHA512 [$downloaded_zip_sha512] does not match remote SHA512 [$remote_zip_sha512]"
         return 1
     fi
 
-    unzip $release_zip_path -d "$(get_version_directory $version)"
+    echo "Extracting and installing binary"
+    unzip -o $release_zip_path -d "$(get_version_directory $version)" &> /dev/null
     if [[ $? -ne 0 ]]; then
         console_error "Error extracting zip $release_zip_path"
         return 1
@@ -308,7 +331,6 @@ install_iron_version() {
         console_error "Error making $(get_version_binary_path $version) executable"
         return 1
     fi
-
     
 }
 
@@ -329,7 +351,7 @@ install_version_env() {
 export IRON_VERSION="$version"
 export IRON_OS_ARCH="$os_arch"
 export IRON_HOME="$IRON_HOME"
-export IRON_UPDATE="$IRON_UPDATE"
+export IRON_AUTO_UPDATE="$IRON_AUTO_UPDATE"
 export IRON_AUTO_UPDATE_INTERVAL=3600  # In seconds (1 hour)
 IRON_PATH="$IRON_HOME/bin"
 if [[ "\$PATH" != *"\$IRON_PATH"* ]]; then
