@@ -1,75 +1,74 @@
 #!/usr/bin/env bash
 
-###########
-# Constants
-###########
+##################
+# Globals
+##################
 
-# Process the inputs
+# Process the inputs.  Must be processed before assigning globals
 while (( $# > 0 )); do
     case $1 in
-        --full )
-            IRON_ARTIFACT="full"
-            ;;
-        --min )
-            IRON_ARTIFACT="min"
-            ;;
         -n )
-            IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-nightly-repo"}
+            IRON_SETUP_REPO=${IRON_SETUP_REPO:-"iron-cli-nightly-repo"}
             shift
             version=$1
-            IRON_AUTO_UPDATE="false"
             ;;
         -f )
-            IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-features-repo"}
+            IRON_SETUP_REPO=${IRON_SETUP_REPO:-"iron-cli-features-repo"}
             shift
             version=$1
-            IRON_AUTO_UPDATE="false"
             ;;
         * )
-            IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-releases"}
             version=$1
-            IRON_AUTO_UPDATE="true"
     esac
     shift
 done
 
+# This must be set first since $IRON_HOME is a dependency for all other functions
+IRON_HOME="$HOME/.cott"
+
+# The github org where the setup artifact can be found
+IRON_SETUP_ORG=${IRON_SETUP_ORG:-"cott-io"}
+
+# The github repo where the setup artifact can be found
+IRON_SETUP_REPO=${IRON_SETUP_REPO:-"iron-cli-releases-repo"}
+
+# This is the repo that hosts the version of iron to install (not setup)
+IRON_ORG=${IRON_ORG:-${IRON_SETUP_ORG}}
+
+# This is the repo that hosts the version of iron to install (not setup)
+IRON_REPO=${IRON_REPO:-${IRON_SETUP_REPO}}
+
 # The default repository that hosts the artifacts
-IRON_REPO=${IRON_REPO:-"https://github.com/cott-io/iron-releases"}
-
-# The repo where the install/update scripts are held
-IRON_ARTIFACT=${IRON_ARTIFACT:-"min"}
-
-# By default, turn on auto updating
-IRON_AUTO_UPDATE=${IRON_AUTO_UPDATE:-"true"}
-
-# The repo where the install/update scripts are held
-IRON_SCRIPTS_REPO=${IRON_SCRIPTS_REPO:-$IRON_REPO}
-
-# The branch of the scripts repo where the install/update scripts are held
-IRON_SCRIPTS_REF=${IRON_SCRIPTS_REF:-"master"}
+IRON_SETUP_REPO_URL="https://github.com/${IRON_SETUP_ORG}/${IRON_SETUP_REPO}"
 
 # The url of the api call for determining the latest artifact
-IRON_LATEST_URL=${IRON_REPO/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
+IRON_SETUP_LATEST_URL=${IRON_SETUP_REPO_URL/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest
 
 # The url of the api call for determining the latest artifact
-IRON_DOWNLOAD_URL=$IRON_REPO/releases/download
+IRON_SETUP_DOWNLOAD_URL=$IRON_SETUP_REPO_URL/releases/download
 
-# The url of the wrapper/binary script source code
-IRON_BIN_URL=${IRON_SCRIPTS_REPO/https:\/\/github.com/https:\/\/raw.githubusercontent.com}/$IRON_SCRIPTS_REF/scripts/fe.sh
-
-# The address to configure for the iron api 
-IRON_ADDR=${IRON_ADDR:-"dev.cott.io:443"}
-
-# The address to configure for the iron rpc services
-IRON_MSG_ADDR=${IRON_MSG_ADDR:-"dev.cott.io:143"}
-
-# The address to configure for the iron net services
-IRON_NET_ADDR=${IRON_NET_ADDR:-"dev.cott.io:43"}
+export IRON_ORG
+export IRON_REPO
+export IRON_SETUP_ORG
+export IRON_SETUP_REPO
 
 ##################
-# Console Utilties
+# Utility functions
 ##################
 
+# Defers contains the commands to run at exit
+DEFERS=()
+handler() {
+    code=$?; eval "${DEFERS[*]}"; exit $code
+}
+
+# Defers a command to be invoked at exit
+defer() {
+    DEFERS+=( "$*;" )
+    trap handler EXIT
+}
+
+# Logs an info level message to the console (and colors it green if available)
 console_info() {
     if ! tput setaf &>/dev/null; then
         echo "$1"
@@ -78,6 +77,7 @@ console_info() {
     fi
 }
 
+# Logs an error level message to the console (and colors it red if available)
 console_error() {
     if ! tput setaf &>/dev/null; then
         echo "$1" 1>&2
@@ -90,38 +90,6 @@ console_error() {
 # OS / Shell Compatibility
 ##########################
 
-set_os_specific_commands() {
-    uname=$(uname)
-    if [[ "$uname" == 'Linux' ]]; then
-        SED_EXTENDED="sed -r"
-        GREP_EXTENDED="grep -P"
-        SHA512="sha512sum"
-    elif [[ "$uname" == 'Darwin' ]]; then
-        SED_EXTENDED="sed -E"
-        GREP_EXTENDED="grep -E"
-        SHA512="shasum -a 512"
-    fi
-}
-
-get_shell() {
-    echo $SHELL | $GREP_EXTENDED -o "\w+$"
-}
-
-get_shell_rc_path() {
-    shell=$1
-
-    case $shell in
-    "zsh")
-        echo "$HOME/.zshrc"
-        ;;
-    "bash")
-        echo "$HOME/.bashrc"
-        ;;
-    *)
-        return 1
-        ;;
-    esac
-}
 
 get_arch() {
     arch=$(uname -m)
@@ -162,6 +130,17 @@ get_os_arch() {
     echo "$(get_os)_$(get_arch)"
 }
 
+if [[ "$(get_os)" == 'linux' ]]; then
+    SED_EXTENDED="sed -r"
+    GREP_EXTENDED="grep -P"
+    SHA512="sha512sum"
+else
+    SED_EXTENDED="sed -E"
+    GREP_EXTENDED="grep -E"
+    SHA512="shasum -a 512"
+fi
+
+
 ###########
 # Utilities
 ###########
@@ -176,115 +155,42 @@ read_sha512() {
 ##################
 
 get_latest_version() {
-    curl -fsSL $IRON_LATEST_URL | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
+    curl -fsSL $IRON_SETUP_LATEST_URL | $GREP_EXTENDED -o '"tag_name":.*?[^\\]\",' | $SED_EXTENDED 's/^ *//;s/.*: *"//;s/",?//'
 }
 
-get_release_filename() {
-    if [[ $# -ne 1 ]]; then
-        console_error "get_release_filename requires arguments: os_arch"
-        return 1
-    fi
-
-    local os_arch=$1
-
-    echo "iron-$os_arch-$IRON_ARTIFACT.zip"
-}
-
-get_version_release_url() {
+get_release_url() {
     if [[ $# -ne 2 ]]; then
-        console_error "get_version_release_url requires arguments: version, os_arch"
+        console_error "get_release_url requires arguments: version, os_arch"
         return 1
     fi
 
     local version=$1
     local os_arch=$2
-
-    local release_filename="$(get_release_filename $os_arch)"
-    echo "$IRON_DOWNLOAD_URL/$version/$release_filename"
+    echo "$IRON_SETUP_DOWNLOAD_URL/${version}/iron-${os_arch}-setup.zip"
 }
 
-get_version_remote_sha512() {
+get_release_sha512() {
     if [[ $# -ne 2 ]]; then
-        console_error "get_version_remote_sha512 requires arguments: version, os_arch"
+        console_error "get_release_sha512 requires arguments: version, os_arch"
         return 1
     fi
 
     local version=$1
     local os_arch=$2
-
-    local sha512_url="$(get_version_release_url $version $os_arch).sha512"
-
+    local sha512_url="$(get_release_url $version $os_arch).sha512"
     local sha512="$(curl -fsSL "$sha512_url")"
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
         console_error "Error downloading $sha512_url"
         return 1
     fi
-
     echo $sha512
-}
-
-
-###########################
-# Warden Dirctory Structure
-###########################
-
-get_version_directory() {
-    if [[ $# -ne 1 ]]; then
-        console_error "get_version_directory requires arguments: version"
-        return 1
-    fi
-
-    local version=$1
-
-    echo "$IRON_HOME/versions/$version"
-}
-
-get_version_binary_path() {
-    if [[ $# -ne 1 ]]; then
-        console_error "get_version_binary_path requires arguments: version"
-        return 1
-    fi
-
-    local version=$1
-
-    echo "$(get_version_directory $version)/fe"
-}
-
-get_env_path() {
-    echo "$IRON_HOME/env.sh"
-}
-
-#####################
-# Local Install State
-#####################
-
-is_version_installed() {
-    if [[ $# -ne 1 ]]; then
-        console_error "is_version_installed requires arguments: version"
-        return 1
-    fi
-
-    local version=$1
-
-    [[ -e "$(get_version_binary_path $version)" ]] && grep -q "$version" "$(get_env_path)"
 }
 
 ####################
 # Download / Install
 ####################
 
-download_iron_script() {
-    mkdir -p "$IRON_HOME/bin"
-    local iron_script_path="$IRON_HOME/bin/fe"
-    curl -fsSL "$IRON_BIN_URL" > "$iron_script_path"
-    if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-        console_error "Error downloading [$IRON_BIN_URL]"
-        return 1
-    fi
-    chmod +x "$iron_script_path"
-}
-
-install_iron_version() {
+install_iron() {
     if [[ ! $# -eq 2 ]]; then
         console_error "install_iron_version requires arguments: version and os_arch"
         return 1
@@ -292,163 +198,55 @@ install_iron_version() {
 
     local version=$1
     local os_arch=$2
-    console_info "Installing iron version: [$version] platform: [$os_arch]..."
+    console_info "Downloading and verifying launcher [$version] on [$os_arch]"
 
-    local release_filename="$(get_release_filename $os_arch)"
-    local download_url="$(get_version_release_url $version $os_arch)"
+    local download_url="$(get_release_url $version $os_arch)"
+    local target_dir="$IRON_HOME/downloads/$version"
+    local target_zip="$target_dir/$(basename $download_url)"
+    defer rm -r $target_dir
 
+    if ! mkdir -p $target_dir; then
+        console_error "Unable to make directory [$target_dir]"
+        return 1
+    fi
 
-    mkdir -p "$(get_version_directory $version)"
-
-    local release_zip_path="$(get_version_directory $version)/$release_filename"
-
-    echo "Downloading binary [$download_url]"
-    curl -fsSL "$download_url" > $release_zip_path
+    curl -fsSL "$download_url" > $target_zip
     if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
         console_error "Error downloading iron release [$download_url]"
         return 1
     fi
 
-    local downloaded_zip_sha512="$($SHA512 $release_zip_path | read_sha512)"
-    local remote_zip_sha512="$(get_version_remote_sha512 $version $os_arch | read_sha512)"
-
-    echo "Verifying download"
-    if [[ "$downloaded_zip_sha512" != "$remote_zip_sha512" ]]; then
-        rm $release_zip_path
-        console_error "Downloaded $release_filename SHA512 [$downloaded_zip_sha512] does not match remote SHA512 [$remote_zip_sha512]"
+    local local_zip_sha512="$($SHA512 $target_zip | read_sha512)"
+    local remote_zip_sha512="$(get_release_sha512 $version $os_arch | read_sha512)"
+    if [[ "$local_zip_sha512" != "$remote_zip_sha512" ]]; then
+        console_error "Downloaded hash [$local_zip_sha512] does not match remote hash [$remote_zip_sha512]"
         return 1
     fi
 
-    echo "Extracting and installing binary"
-    unzip -o $release_zip_path -d "$(get_version_directory $version)" &> /dev/null
+    unzip -o $target_zip -d "$target_dir" &> /dev/null
     if [[ $? -ne 0 ]]; then
-        console_error "Error extracting zip $release_zip_path"
+        console_error "Error extracting zip [$target_zip]"
         return 1
     fi
 
-    chmod +x "$(get_version_binary_path $version)"
+    $target_dir/fe .setup
     if [[ $? -ne 0 ]]; then
-        console_error "Error making $(get_version_binary_path $version) executable"
+        console_error "Error running setup"
         return 1
     fi
-    
 }
 
-install_version_env() {
-    if [[ ! $# -eq 2 ]]; then
-        console_error "install_version_env requires arguments: version, os_arch"
-        return 1
-    fi
-
-    local version=$1
-    local os_arch=$2
-
-    mkdir -p "$(get_version_directory $version)"
-
-    local version_env_path="$(get_version_directory $version)/env.sh"
-
-    cat > "$version_env_path" <<-EOM
-export IRON_VERSION="$version"
-export IRON_OS_ARCH="$os_arch"
-export IRON_HOME="$IRON_HOME"
-export IRON_AUTO_UPDATE="$IRON_AUTO_UPDATE"
-export IRON_AUTO_UPDATE_INTERVAL=3600  # In seconds (1 hour)
-IRON_PATH="$IRON_HOME/bin"
-if [[ "\$PATH" != *"\$IRON_PATH"* ]]; then
-    export PATH="\$PATH:\$IRON_PATH"
-fi
-EOM
-}
-
-install_root_env() {
-    if [[ ! $# -eq 1 ]]; then
-        console_error "install_root_env requires arguments: version"
-        return 1
-    fi
-
-    local version=$1
-
-    local version_env_path="$(get_version_directory $version)/env.sh"
-
-    local env_path="$(get_env_path)"
-    cat > "$env_path" <<-EOM
-source $version_env_path
-EOM
-    
-    local source_line="source $env_path"
-    local shell="$(get_shell)"
-    local shell_rc_path=$(get_shell_rc_path $shell)
-
-    if [[ $? -ne 0 ]]; then
-        console_error "Unable to add add to $shell rc file. Please add '$source_line' to your shell's rc file"
-        return 1
-    fi
-
-    read -r -d '' add_rc <<EOM
-
-# Added by iron
-$source_line
-EOM
-
-    if ! grep -q "$add_rc" $shell_rc_path; then
-        echo "$add_rc" >> $shell_rc_path
-    fi
-
-
-echo "Updated $shell_rc_path"
-}
 
 ########
 # Main #
 ########
 
-set_os_specific_commands
 if [[ "$version" != "" ]]; then
     version=$version
 else
-    version=${1:-$(get_latest_version)}
+    version=$(get_latest_version)
 fi
-#version=${1:-$(get_latest_version)}
 
-last_update_check=$(date +"%s")
-
-# This must be set first since $IRON_HOME is a dependency for all other functions
-IRON_HOME="$HOME/.cott"
-
-os_arch="$(get_os_arch)"
-
-if ! install_version_env $version $os_arch; then
+if ! install_iron "$version" "$(get_os_arch)"; then
     exit $?
 fi
-
-if ! install_iron_version $version $os_arch; then
-    exit $?
-fi
-
-if ! download_iron_script $version; then
-    exit $?
-fi
-
-if ! install_root_env $version; then
-    exit $?
-fi
-
-cat > $IRON_HOME/config.toml <<-EOM
-Display = ""
-Editor = ""
-Format = ""
-Strength = ""
-ApiAddr = "$IRON_ADDR"
-MsgAddr = "$IRON_MSG_ADDR"
-NetAddr = "$IRON_NET_ADDR"
-Color = ""
-Logging = "Off"
-LoginHeader = ""
-EOM
-
-echo "Successfully installed iron $version!"
-echo 
-echo "To complete the installation, please run:"
-echo 
-console_info "  source $(get_env_path)"
-echo 
