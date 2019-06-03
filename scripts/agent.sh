@@ -4,12 +4,12 @@
 #####################
 
 if ! command -v curl > /dev/null; then
-	echo "Curl not installed on agent host" >&2
-	exit 1
+    echo "Curl not installed on agent host" >&2
+    exit 1
 fi
 if ! command -v unzip > /dev/null; then
-	echo "Unzip not installed on agent host" >&2
-	exit 1
+    echo "Unzip not installed on agent host" >&2
+    exit 1
 fi
 if ! command -v systemctl > /dev/null; then
     echo "Systemd is not installed on agent host" >&2
@@ -27,8 +27,8 @@ if [[ $(uname -m) != "x86_64" ]]; then
 fi
 
 if [[ $1 == "" ]]; then 
-	echo "Must supply a provision token. To obtain: $ fe agent gentoken" >&2
-	exit 1
+    echo "Must supply a provision token. To obtain: $ fe agent gentoken" >&2
+    exit 1
 fi
 
 
