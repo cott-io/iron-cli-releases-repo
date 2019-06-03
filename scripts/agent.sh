@@ -74,31 +74,32 @@ IRON_API_ADDR=${IRON_API_ADDR:-dev.cott.io:443}
 # The addresse of the iron networking services
 IRON_NET_ADDR=${IRON_NET_ADDR:-dev.cott.io:43}
 
-# The github org where the setup artifact can be found
-IRON_ORG=${IRON_ORG:-"cott-io"}
+# Determine the artifact url
+if [[ -z $IRON_DOWNLOAD_URL ]]; then 
 
-# The github repo where the setup artifact can be found
-IRON_REPO=${IRON_REPO:-"iron-cli-releases-repo"}
+    # The github org where the setup artifact can be found
+    IRON_ORG=${IRON_ORG:-"cott-io"}
 
-# The basename of the artifact to install 
-IRON_ARTIFACT="iron-linux_amd64-min.zip"
+    # The github repo where the setup artifact can be found
+    IRON_REPO=${IRON_REPO:-"iron-cli-releases-repo"}
 
-# The default repository that hosts the artifacts
-IRON_REPO_URL="https://github.com/${IRON_ORG}/${IRON_REPO}"
+    # The default repository that hosts the artifacts
+    IRON_REPO_URL="https://github.com/$IRON_ORG/$IRON_REPO"
 
-# Determine the version to install if we don't already have one
-if [[ -z $IRON_VERSION ]]; then 
-    IRON_VERSION=$(curl ${IRON_REPO_URL/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest \
-        | grep -o '"tag_name":.*?[^\\]\",' \
-        | sed 's/^ *//;s/.*: *"//;s/",?//')
-    if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
-        echo "Error determining iron version" >&2
-        exit 1
+    # Determine the version to install if we don't already have one
+    if [[ -z $IRON_VERSION ]]; then 
+        IRON_VERSION=$(curl ${IRON_REPO_URL/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest \
+            | grep -o '"tag_name":.*?[^\\]\",' \
+            | sed 's/^ *//;s/.*: *"//;s/",?//')
+        if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+            echo "Error determining iron version" >&2
+            exit 1
+        fi
     fi
-fi
 
-# The core artifact url 
-IRON_DOWNLOAD_URL=$IRON_REPO_URL/releases/download/$IRON_VERSION/$IRON_ARTIFACT
+    # The core artifact url 
+    IRON_DOWNLOAD_URL=$IRON_REPO_URL/releases/download/$IRON_VERSION/iron-linux_amd64-min.zip
+fi
 
 # The user under which to install the agent
 AGENT_USER=${AGENT_USER:-"iron"}
