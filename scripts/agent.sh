@@ -106,11 +106,21 @@ AGENT_USER=${AGENT_USER:-"iron"}
 
 echo "* Creating agent user account [$AGENT_USER]"
 if ! id -u $AGENT_USER > /dev/null; then
-    if ! sudo useradd $AGENT_USER -G sudo > /dev/null; then
+    if ! sudo useradd $AGENT_USER > /dev/null; then
         echo "Could not add '$AGENT_USER' user" >&2
         exit 1
     fi
 fi
+
+echo "* Granting sudo access"
+AGENT_GROUPS=( sudo wheel )
+for group in "${AGENT_GROUPS[@]}"; do
+    if getent group "$group" &> /dev/null; then
+        if ! id -nG $AGENT_USER | grep -wq "$group"; then
+            sudo usermod $AGENT_USER -aG "$group"
+        fi
+    fi
+done
 
 AGENT_HOME=$(eval "echo ~$AGENT_USER")
 echo "* Setting up agent home [$AGENT_HOME]"
