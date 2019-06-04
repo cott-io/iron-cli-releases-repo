@@ -26,7 +26,7 @@ if [[ $(uname -m) != "x86_64" ]]; then
     exit 1
 fi
 
-if [[ $1 == "" ]]; then 
+if [[ $1 == "" ]]; then
     echo "Must supply a provision token. To obtain: $ fe agent gentoken" >&2
     exit 1
 fi
@@ -65,7 +65,7 @@ shasum() {
 }
 
 #####################
-# GLOBAL VARS 
+# GLOBAL VARS
 #####################
 
 # The addresse of the iron api services
@@ -75,7 +75,7 @@ IRON_API_ADDR=${IRON_API_ADDR:-dev.cott.io:443}
 IRON_NET_ADDR=${IRON_NET_ADDR:-dev.cott.io:43}
 
 # Determine the artifact url
-if [[ -z $IRON_DOWNLOAD_URL ]]; then 
+if [[ -z $IRON_DOWNLOAD_URL ]]; then
 
     # The github org where the setup artifact can be found
     IRON_ORG=${IRON_ORG:-"cott-io"}
@@ -87,7 +87,7 @@ if [[ -z $IRON_DOWNLOAD_URL ]]; then
     IRON_REPO_URL="https://github.com/$IRON_ORG/$IRON_REPO"
 
     # Determine the version to install if we don't already have one
-    if [[ -z $IRON_VERSION ]]; then 
+    if [[ -z $IRON_VERSION ]]; then
         IRON_VERSION=$(curl ${IRON_REPO_URL/https:\/\/github.com/https:\/\/api.github.com\/repos}/releases/latest \
             | grep -o '"tag_name":.*?[^\\]\",' \
             | sed 's/^ *//;s/.*: *"//;s/",?//')
@@ -97,7 +97,7 @@ if [[ -z $IRON_DOWNLOAD_URL ]]; then
         fi
     fi
 
-    # The core artifact url 
+    # The core artifact url
     IRON_DOWNLOAD_URL=$IRON_REPO_URL/releases/download/$IRON_VERSION/iron-linux_amd64-min.zip
 fi
 
@@ -132,7 +132,7 @@ if ! curl $IRON_DOWNLOAD_URL > $TMP_ZIP_FILE 2> /dev/null; then
     echo "Failed to download agent binary [$IRON_DOWNLOAD_URL]" >&2
     exit 1
 fi
-defer "rm $TMP_ZIP_FILE" 
+defer "rm $TMP_ZIP_FILE"
 
 if [[ $(shasum $TMP_ZIP_FILE | grep -o '^\w+') != $(curl $IRON_DOWNLOAD_URL.sha512 | grep -o '^\w+' ) ]]; then
     echo "Failed to verify checksum of downloaded zip file" >&2
@@ -154,8 +154,17 @@ if ! sudo -u $AGENT_USER fe config set --net-addr $IRON_NET_ADDR > /dev/null; th
     exit 1
 fi
 
+AGENT_OPTS=()
+if [[ "$IRON_EXT_ADDR" != "" ]]; then
+    AGENT_OPTS+=( "--external-addr" "$IRON_EXT_ADDR" )
+fi
+
+if [[ "$AGENT_NAME" != "" ]]; then
+    AGENT_OPTS+=( "--name" "$AGENT_NAME" )
+fi
+
 echo "* Provisioning agent"
-if ! sudo -u $AGENT_USER fe agent provision $1 > /dev/null; then
+if ! sudo -u $AGENT_USER fe agent provision $1 ${AGENT_OPTS[@]}; then
     echo "Error provisioning agent" >&2
     exit 1
 fi
