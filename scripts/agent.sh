@@ -106,7 +106,7 @@ AGENT_USER=${AGENT_USER:-"iron"}
 
 echo "* Creating agent user account [$AGENT_USER]"
 if ! id -u $AGENT_USER > /dev/null; then
-    if ! sudo useradd $AGENT_USER > /dev/null; then
+    if ! sudo useradd $AGENT_USER -G sudo > /dev/null; then
         echo "Could not add '$AGENT_USER' user" >&2
         exit 1
     fi
