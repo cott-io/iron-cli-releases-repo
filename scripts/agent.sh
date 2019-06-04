@@ -155,8 +155,8 @@ if ! sudo -u $AGENT_USER fe config set --net-addr $IRON_NET_ADDR > /dev/null; th
 fi
 
 AGENT_OPTS=()
-if [[ "$IRON_EXT_ADDR" != "" ]]; then
-    AGENT_OPTS+=( "--external-addr" "$IRON_EXT_ADDR" )
+if [[ "$AGENT_ADDR" != "" ]]; then
+    AGENT_OPTS+=( "--remote-addr" "$AGENT_ADDR" )
 fi
 
 if [[ "$AGENT_NAME" != "" ]]; then
