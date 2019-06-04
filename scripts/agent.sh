@@ -112,15 +112,10 @@ if ! id -u $AGENT_USER > /dev/null; then
     fi
 fi
 
-echo "* Granting sudo access"
-AGENT_GROUPS=( sudo wheel )
-for group in "${AGENT_GROUPS[@]}"; do
-    if getent group "$group" &> /dev/null; then
-        if ! id -nG $AGENT_USER | grep -wq "$group"; then
-            sudo usermod $AGENT_USER -aG "$group"
-        fi
-    fi
-done
+echo "* Adding /etc/sudoers.d/$AGENT_USER"
+sudo tee /etc/sudoers.d/$AGENT_USER > /dev/null <<-EOF
+$AGENT_USER ALL=(ALL:ALL) NOPASSWD:ALL
+EOF
 
 AGENT_HOME=$(eval "echo ~$AGENT_USER")
 echo "* Setting up agent home [$AGENT_HOME]"
