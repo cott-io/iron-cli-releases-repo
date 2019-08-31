@@ -204,8 +204,13 @@ if ! sudo systemctl daemon-reload; then
     exit 1
 fi
 
+if ! sudo systemctl enable iron-agent; then
+    echo "Error starting the agent.  Manually install using systemd: systemctl enable iron-agent" >&2
+    exit 1
+fi
+
 if ! sudo systemctl restart iron-agent; then
-    echo "Error starting the agent.  Manully install using systemd: systemctl iron-agent start" >&2
+    echo "Error starting the agent.  Manually install using systemd: systemctl restart iron-agent" >&2
     exit 1
 fi
 
