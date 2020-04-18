@@ -196,7 +196,7 @@ After=network-online.target
 [Service]
 User=$AGENT_USER
 Group=$AGENT_USER
-ExecStart=/usr/bin/fe agent start
+ExecStart=/usr/bin/sudo fe agent start
 KillMode=process
 Restart=on-failure
 LimitNOFILE=65536
