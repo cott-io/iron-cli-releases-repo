@@ -4,14 +4,14 @@
 #####################
 
 if ! command -v curl > /dev/null; then
-    if ! sudo apt-get install -yq curl; then 
+    if ! sudo apt-get install -yq curl 2>&1 > /dev/null; then 
         echo "Curl not installed on agent host" >&2
         exit 1
     fi
 fi
 
 if ! command -v unzip > /dev/null; then
-    if ! sudo apt-get install -yq unzip; then 
+    if ! sudo apt-get install -yq unzip 2>&1 > /dev/null; then 
         echo "Unzip not installed on agent host" >&2
         exit 1
     fi
